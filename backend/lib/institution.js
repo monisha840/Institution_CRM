@@ -73,7 +73,15 @@ export function getInstitutionType() {
 
 /** Resolve the mode out of a settings object, falling back to school. */
 export function institutionTypeFromSettings(settings) {
-  const raw = settings?.school?.institutionType || settings?.school?.institution_type;
+  let raw = settings?.school?.institutionType ?? settings?.school?.institution_type;
+  if (typeof raw !== "string") return "school";
+  raw = raw.trim();
+  // Tolerate a value that was written JSON-encoded ('"college"') by an older
+  // seed — settings are otherwise stored raw, and a stray pair of quotes
+  // would silently pin the whole app back to school mode.
+  if (raw.length > 1 && raw[0] === '"' && raw[raw.length - 1] === '"') {
+    raw = raw.slice(1, -1);
+  }
   return INSTITUTION_TYPES.includes(raw) ? raw : "school";
 }
 

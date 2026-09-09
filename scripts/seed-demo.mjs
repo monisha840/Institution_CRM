@@ -406,15 +406,19 @@ for (const cls of EXAM_CLASSES) {
 }
 
 // ---- settings -------------------------------------------------------------
+// writeSettings() persists scalars raw and only JSON-encodes objects/arrays,
+// and readSettings() hands the stored value straight back. Storing a
+// JSON.stringify'd string here would surface as a quoted "college" everywhere,
+// including the institution-mode check.
 const app_settings = [
-  { section: "school",  key: "institutionType", value: JSON.stringify(MODE) },
-  { section: "school",  key: "name",            value: JSON.stringify(INSTITUTION.name) },
-  { section: "school",  key: "city",            value: JSON.stringify(`${INSTITUTION.city}, Tamil Nadu`) },
-  { section: "school",  key: "programme",       value: JSON.stringify(INSTITUTION.programme) },
-  { section: "school",  key: "address",         value: JSON.stringify("12 Anna Salai, Chennai 600002") },
-  { section: "school",  key: "phone",           value: JSON.stringify("+91 44 4000 1234") },
-  { section: "finance", key: "upi",             value: JSON.stringify("sirahdemo@hdfc") },
-  { section: "finance", key: "academicYear",    value: JSON.stringify("2026-27") },
+  { section: "school",  key: "institutionType", value: MODE },
+  { section: "school",  key: "name",            value: INSTITUTION.name },
+  { section: "school",  key: "city",            value: `${INSTITUTION.city}, Tamil Nadu` },
+  { section: "school",  key: "programme",       value: INSTITUTION.programme },
+  { section: "school",  key: "address",         value: "12 Anna Salai, Chennai 600002" },
+  { section: "school",  key: "phone",           value: "+91 44 4000 1234" },
+  { section: "finance", key: "upi",             value: "sirahdemo@hdfc" },
+  { section: "finance", key: "academicYear",    value: "2026-27" },
 ];
 
 // ------------------------------------------------------------------- run it
