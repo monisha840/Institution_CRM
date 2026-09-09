@@ -144,6 +144,34 @@ export default function AppShell({ initialData, session }) {
   const institution = institutionTypeFromSettings(data?.SETTINGS);
   setInstitutionType(institution);
   setInstitutionName(data?.SETTINGS?.school?.name);
+
+  // Flip school <-> college. The mode is applied optimistically so a live demo
+  // switches the instant it is clicked, then persisted; if the save fails the
+  // optimistic flip is rolled back rather than leaving the UI asserting a
+  // change the database never took.
+  async function changeInstitution(next) {
+    const previous = institution;
+    if (next === previous) return;
+    const applyMode = (mode) => setData((d) => ({
+      ...d,
+      SETTINGS: {
+        ...(d?.SETTINGS || {}),
+        school: { ...((d?.SETTINGS || {}).school || {}), institutionType: mode },
+      },
+    }));
+    applyMode(next);
+    try {
+      const r = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ settings: { school: { institutionType: next } } }),
+      });
+      const j = await r.json();
+      if (!j?.ok) throw new Error(j?.error || "Save failed");
+    } catch {
+      applyMode(previous);
+    }
+  }
   const V = vocab();
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [current, setCurrent] = useState(DEFAULT_SCREEN_BY_ROLE[session?.role] || "dashboard");
@@ -774,6 +802,9 @@ export default function AppShell({ initialData, session }) {
             }
           />
           <div className="topbar-right">
+            {role === "admin" && (
+              <InstitutionToggle value={institution} onChange={changeInstitution} />
+            )}
             <NotificationsPanel E={scopedData} role={role} setCurrent={setCurrent} />
             {userMenu}
           </div>
@@ -791,6 +822,39 @@ export default function AppShell({ initialData, session }) {
         onDismiss={() => setReminderToast(null)}
         onOpen={(screen) => { setReminderToast(null); if (screen) setCurrent(screen); }}
       />
+    </div>
+  );
+}
+
+
+// Institution mode switch, shown in the top bar so school and college can be
+// demonstrated side by side without navigating into Settings. Admin only,
+// mirroring /api/settings, which rejects this write for every other role.
+function InstitutionToggle({ value, onChange }) {
+  const [busy, setBusy] = useState(false);
+  const flip = async (next) => {
+    if (busy || next === value) return;
+    setBusy(true);
+    try { await onChange(next); } finally { setBusy(false); }
+  };
+  return (
+    <div
+      className="segmented"
+      style={{ marginRight: 8, opacity: busy ? 0.6 : 1 }}
+      title="Switch between school and college presentation"
+    >
+      {[["school", "School"], ["college", "College"]].map(([key, label]) => (
+        <button
+          key={key}
+          type="button"
+          className={value === key ? "active" : ""}
+          disabled={busy}
+          onClick={() => flip(key)}
+          style={{ fontSize: 11.5, padding: "0 11px", whiteSpace: "nowrap" }}
+        >
+          {label}
+        </button>
+      ))}
     </div>
   );
 }
