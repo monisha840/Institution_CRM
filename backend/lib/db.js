@@ -92,12 +92,23 @@ const EMPTY_DB = {
   campaigns: [],
 };
 
+// Returns false when the JSON store cannot be created — a serverless host
+// mounts the deployment read-only. Callers treat that as "no file store" and
+// rely on Supabase, which is the source of truth whenever it is configured.
 function fileEnsure() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (!fs.existsSync(DB_PATH)) fs.writeFileSync(DB_PATH, JSON.stringify(EMPTY_DB, null, 2));
+  if (!fileStoreWritable()) return false;
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    if (!fs.existsSync(DB_PATH)) fs.writeFileSync(DB_PATH, JSON.stringify(EMPTY_DB, null, 2));
+    return true;
+  } catch {
+    return false;
+  }
 }
 export function fileRead() {
-  fileEnsure();
+  // No writable store (serverless): hand back the empty shape so callers that
+  // merge file rows into a Supabase result still work on their normal path.
+  if (!fileEnsure()) return structuredClone(EMPTY_DB);
   const raw = fs.readFileSync(DB_PATH, "utf8");
   const data = JSON.parse(raw);
   let touched = false;
@@ -107,9 +118,20 @@ export function fileRead() {
   if (touched) fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
   return data;
 }
+// Mirrors state into the local JSON store. On a read-only filesystem this is a
+// no-op rather than a throw: every caller already wrote to Supabase first, and
+// failing here used to abort the whole request *after* the real write had
+// landed — which is why saving Settings returned
+// "ENOENT: no such file or directory, mkdir '/var/task/data'" on Vercel even
+// though the row reached the database.
 export function fileWrite(data) {
-  fileEnsure();
-  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+  if (!fileEnsure()) return false;
+  try {
+    fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // Empty arrays for tables not (yet) backed by Supabase.
