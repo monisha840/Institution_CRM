@@ -53,6 +53,23 @@ export const BACKEND = supabaseEnabled ? "supabase" : "file";
 const DATA_DIR = path.join(process.cwd(), "data");
 const DB_PATH = path.join(DATA_DIR, "db.json");
 
+// True when the JSON file store can actually be written. Serverless platforms
+// (Vercel, Lambda) mount the deployment read-only, so falling back to the file
+// there turns a recoverable Supabase error into an unrecoverable EROFS crash.
+let _fileStoreWritable = null;
+function fileStoreWritable() {
+  if (_fileStoreWritable !== null) return _fileStoreWritable;
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.accessSync(DATA_DIR, fs.constants.W_OK);
+    _fileStoreWritable = true;
+  } catch {
+    _fileStoreWritable = false;
+  }
+  return _fileStoreWritable;
+}
+
+
 const EMPTY_DB = {
   addedStudents: [],
   pendingFees: [],
@@ -2090,10 +2107,27 @@ export async function convertEnquiryToAdmission(enquiryId, opts = {}) {
 
 export async function addEnquiry(row) {
   if (supabaseEnabled) {
-    const ins = await supabase.from("enquiries").insert(row).select().single();
+    // PostgREST cache lag, or a column this deployment's schema predates —
+    // strip whichever column is unknown and retry, the same way addComplaint
+    // does. Without this a single missing column (dob/age/street/city/pin)
+    // sent the whole insert down the file-store path, which is a read-only
+    // filesystem on serverless hosts: the enquiry was lost with an EROFS 500.
+    let attempt = row;
+    let ins = await supabase.from("enquiries").insert(attempt).select().single();
+    let safety = 8;
+    while (ins.error && safety-- > 0) {
+      const m = /Could not find the '([a-z_]+)' column/i.exec(ins.error.message);
+      if (!m) break;
+      const next = { ...attempt };
+      delete next[m[1]];
+      if (Object.keys(next).length === Object.keys(attempt).length) break;
+      attempt = next;
+      ins = await supabase.from("enquiries").insert(attempt).select().single();
+    }
     if (ins.error) {
-      // Schema cache lag / missing table → file fallback so user isn't blocked.
-      if (/enquir/i.test(ins.error.message)) return fileAddEnquiry(row);
+      // Only a genuinely absent table justifies the file store, and even then
+      // only where the filesystem is writable (never on serverless).
+      if (/enquir/i.test(ins.error.message) && fileStoreWritable()) return fileAddEnquiry(row);
       throw new Error(ins.error.message);
     }
     return fromEnquiry(ins.data);
