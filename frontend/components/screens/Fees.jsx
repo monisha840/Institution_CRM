@@ -49,6 +49,67 @@ function formatFeeWhen(f) {
   return (f.time && f.time !== "just now") ? f.time : "—";
 }
 
+// ---------------------------------------------------------------------------
+// Receivables ageing.
+//
+// Ported from the S Prince Hightech CRM (src/analytics.js -> ageingBuckets),
+// which bucketed unpaid invoices by how long they had been outstanding. The
+// same idea applied to school fees answers the question a bursar actually
+// asks: not "how much is pending" but "how long has it been pending".
+//
+// `pending_fees.due` is a free-text column. Rows holding an ISO date are aged
+// precisely; anything unparseable falls back to the row's own `overdue` flag
+// so older free-text rows ("in 7 days") still land in a sensible bucket.
+// ---------------------------------------------------------------------------
+const AGEING_BUCKETS = [
+  { label: "Not due", tone: "",     min: null, max: -1 },
+  { label: "0-30",    tone: "warn", min: 0,    max: 30 },
+  { label: "31-60",   tone: "warn", min: 31,   max: 60 },
+  { label: "61-90",   tone: "bad",  min: 61,   max: 90 },
+  { label: "90+",     tone: "bad",  min: 91,   max: null },
+];
+
+function daysOverdue(fee) {
+  const parsed = Date.parse(String(fee?.due || ""));
+  // No usable date: the overdue flag decides which side of "due" it sits on.
+  if (Number.isNaN(parsed)) return fee?.overdue ? 0 : -1;
+  return Math.floor((Date.now() - parsed) / 86400000);
+}
+
+export function feeAgeing(pending) {
+  return AGEING_BUCKETS.map((b) => {
+    const rows = (pending || []).filter((f) => {
+      const n = daysOverdue(f);
+      if (b.min === null) return n <= b.max;
+      if (b.max === null) return n >= b.min;
+      return n >= b.min && n <= b.max;
+    });
+    return { ...b, count: rows.length, amount: rows.reduce((a, f) => a + (Number(f.amount) || 0), 0) };
+  });
+}
+
+// Compact strip under the fee totals. Hidden entirely when nothing is pending,
+// so a school that is fully collected doesn't see an empty row of zeroes.
+function FeeAgeing({ pending }) {
+  const buckets = feeAgeing(pending);
+  if (!buckets.some((b) => b.count > 0)) return null;
+  return (
+    <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8, flexWrap: "wrap" }}>
+      <span style={{ fontSize: 10.5, color: "var(--ink-3)", letterSpacing: 0.4, textTransform: "uppercase" }}>
+        Ageing
+      </span>
+      {buckets.filter((b) => b.count > 0).map((b) => (
+        <span key={b.label} className={b.tone ? `chip ${b.tone}` : "chip"}
+              title={`${b.count} fee line${b.count === 1 ? "" : "s"} · ${b.label === "Not due" ? "not yet due" : b.label + " days overdue"}`}>
+          {b.tone ? <span className="dot" /> : null}
+          {b.label}: {money(b.amount)}
+          <span style={{ opacity: 0.55, marginLeft: 4 }}>({b.count})</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default function ScreenFees({ E, refresh, role, session, searchFocus, clearSearchFocus }) {
   const school = resolveSchool(E?.SETTINGS);
   const actor  = session?.name || null;
@@ -975,6 +1036,7 @@ export default function ScreenFees({ E, refresh, role, session, searchFocus, cle
             <span className="chip warn"><span className="dot" />{money(totals.pending)} pending</span>
             <span className="chip bad"><span className="dot" />{money(totals.overdue)} overdue</span>
           </div>
+          <FeeAgeing pending={scopedPending} />
         </div>
         <div className="page-actions">
           {isParent ? (
