@@ -38,7 +38,7 @@ export default function ScreenUsers({ E, role, session, refresh }) {
 
   // Backfill parent logins: wipe all parent user accounts, then re-create
   // one fresh login per current student so emails follow the canonical
-  // parent.{name}@sanfort.com scheme. Used to clean up after imports
+  // parent.{name}@sirahdemo.school scheme. Used to clean up after imports
   // where stale parent rows were colliding with new student IDs.
   const [backfillBusy, setBackfillBusy]   = useState(false);
   const [backfillLogins, setBackfillLogins] = useState(null);
@@ -387,7 +387,7 @@ export default function ScreenUsers({ E, role, session, refresh }) {
                 className="btn"
                 onClick={runBackfill}
                 disabled={backfillBusy}
-                title="Wipe every parent user and create a clean login per current student (parent.{name}@sanfort.com + {Name}@123)"
+                title="Wipe every parent user and create a clean login per current student (parent.{name}@sirahdemo.school + {Name}@123)"
               >
                 {backfillBusy ? (
                   <>

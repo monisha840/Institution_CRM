@@ -1,4 +1,4 @@
-// Server-side branded QR renderer for Sanfort.
+// Server-side branded QR renderer for Sirah.
 //
 // Builds the QR matrix with the `qrcode` npm package, then draws it to a
 // @napi-rs/canvas with our blue + orange theme and overlays the school

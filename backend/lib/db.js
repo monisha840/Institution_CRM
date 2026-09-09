@@ -409,7 +409,7 @@ export async function readAllData() {
       // App-wide settings (trust identity, finance, communication, security)
       // — exposed to the client so every screen's CSV / PDF export can
       // stamp the right school name on the header. Falls back to {} so
-      // exports default to the bundled "Sanfort International School" if
+      // exports default to the bundled "Sirah Demo School" if
       // settings haven't been written yet.
       appSettings: await readSettings().catch(() => ({})),
       teacherAttendance: (() => {
@@ -3086,12 +3086,12 @@ function deriveParentPassword(studentName) {
 }
 
 // Derive a parent login email when one wasn't explicitly supplied. New
-// format (2026-06-04): `parent.{slugged-name}@sanfort.com`. If a student
+// format (2026-06-04): `parent.{slugged-name}@sirahdemo.school`. If a student
 // with the same slugged name already has an account, we append a 4-digit
 // tail from the student ID to disambiguate siblings or namesakes.
 async function deriveParentEmail(studentId, studentName) {
   const base = slugifyName(studentName) || String(studentId).toLowerCase();
-  const candidate = `parent.${base}@sanfort.com`;
+  const candidate = `parent.${base}@sirahdemo.school`;
   // Fast path — first student with this name gets the clean email.
   try {
     const existing = await getUserByEmail(candidate);
@@ -3100,7 +3100,7 @@ async function deriveParentEmail(studentId, studentName) {
   // Collision: append the numeric tail of the student id, e.g. "9499".
   // Falls back to the full id if there are no digits.
   const idTail = String(studentId).match(/\d+/)?.[0] || String(studentId).toLowerCase();
-  return `parent.${base}.${idTail}@sanfort.com`;
+  return `parent.${base}.${idTail}@sirahdemo.school`;
 }
 
 // Create a parent login linked to a student so the parent dashboard scopes to
@@ -3354,7 +3354,7 @@ export async function addVolunteer(payload = {}) {
     hours: 0,
     assignments: [],
     createdAt: now.toISOString(),
-    // Extended Sanvi registration fields. All optional — older callers that
+    // Extended Sirah registration fields. All optional — older callers that
     // only pass {name, email, phone, skills, availability, notes} still work.
     dob: payload.dob || null,
     age: payload.age == null ? null : Number(payload.age),

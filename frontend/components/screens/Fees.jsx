@@ -749,7 +749,7 @@ export default function ScreenFees({ E, refresh, role, session, searchFocus, cle
       + `<style>td{padding:4px 6px;border-bottom:1px solid #eee}</style></head>`
       + `<body style="font-family:Arial,Helvetica,sans-serif;color:#111;max-width:900px;margin:24px auto;padding:0 16px">`
       + `<div style="text-align:center;border-bottom:2px solid #1f3a8a;padding-bottom:10px;margin-bottom:8px">`
-      + `<div style="font-size:18px;font-weight:800;color:#1f3a8a">${escapeHtml(school?.name || "Sanfort International School")}</div>`
+      + `<div style="font-size:18px;font-weight:800;color:#1f3a8a">${escapeHtml(school?.name || "Sirah Demo School")}</div>`
       + `<div style="font-size:13px;margin-top:4px">Pending Fees · ${escapeHtml(termLabel)} + Admission + Transport · ${escapeHtml(scope)}</div></div>`
       + `<div style="font-size:12px;margin-bottom:4px">Grand total: ${m(gT + gA + gTr)} (${escapeHtml(termLabel)} ${m(gT)} · Admission ${m(gA)} · Transport ${m(gTr)})</div>`
       + sections
@@ -802,7 +802,7 @@ export default function ScreenFees({ E, refresh, role, session, searchFocus, cle
   // Receipt actions
   const phoneFor = () => DEMO_PARENT_PHONE.replace(/[^0-9]/g, "");
   const sendWhatsApp = () => {
-    const text = encodeURIComponent(`Receipt for ${selected.name} (${selected.id}) · ₹${selected.amount} paid via ${method}. Thank you — Sanfort International School.`);
+    const text = encodeURIComponent(`Receipt for ${selected.name} (${selected.id}) · ₹${selected.amount} paid via ${method}. Thank you — Sirah Demo School.`);
     window.open(`https://wa.me/${phoneFor()}?text=${text}`, "_blank");
     flash("Opened WhatsApp");
   };
@@ -812,7 +812,7 @@ export default function ScreenFees({ E, refresh, role, session, searchFocus, cle
   };
   const sendEmail = () => {
     const subject = encodeURIComponent(`Fee receipt · ${selected.id} · ${selected.name}`);
-    const body = encodeURIComponent(`Dear Parent,\n\nThis is to confirm receipt of ₹${selected.amount} towards fees for ${selected.name} (${formatClassLabel(selected.cls)}, Reg ID ${selected.id}).\nMethod: ${method}\n\nThank you,\nSanfort International School\nRun by Sanvi Educational and Charitable Trust`);
+    const body = encodeURIComponent(`Dear Parent,\n\nThis is to confirm receipt of ₹${selected.amount} towards fees for ${selected.name} (${formatClassLabel(selected.cls)}, Reg ID ${selected.id}).\nMethod: ${method}\n\nThank you,\nSirah Demo School\nRun by Sirah Education Trust`);
     window.open(`mailto:parent@example.com?subject=${subject}&body=${body}`, "_self");
     flash("Opened email draft");
   };
@@ -910,8 +910,8 @@ export default function ScreenFees({ E, refresh, role, session, searchFocus, cle
     <div class="logo-row">
       <img src="${window.location.origin}/logo.png" alt="logo" />
       <div class="school-block">
-        <div class="school">SANFORT INTERNATIONAL SCHOOL</div>
-        <div class="trust">Sanvi Educational and Charitable Trust</div>
+        <div class="school">SIRAH DEMO SCHOOL</div>
+        <div class="trust">Sirah Education Trust</div>
       </div>
     </div>
     <div class="cell">Cell : 98765 43210</div>
@@ -1453,7 +1453,7 @@ export default function ScreenFees({ E, refresh, role, session, searchFocus, cle
                 const amt = payAmount.trim() === "" ? balance : Math.floor(Number(payAmount) || 0);
                 const upiUri = buildUpiUri({
                   upiId: finance.upi,
-                  payeeName: finance.upiPayeeName || "Sanfort International School",
+                  payeeName: finance.upiPayeeName || "Sirah Demo School",
                   amount: amt,
                   note: `Fee ${selected.id}`,
                   transactionRef: selected.id,
@@ -1521,8 +1521,8 @@ export default function ScreenFees({ E, refresh, role, session, searchFocus, cle
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
                       <img src="/logo.png" alt="logo" style={{ width: 50, height: 50, objectFit: "contain", flexShrink: 0 }} />
                       <div style={{ flex: 1, textAlign: "center", color: navy }}>
-                        <div style={{ fontWeight: 800, fontSize: 14, letterSpacing: 0.3, lineHeight: 1.15 }}>SANFORT INTERNATIONAL SCHOOL</div>
-                        <div style={{ fontWeight: 700, fontSize: 10.5, marginTop: 2, letterSpacing: 0.3 }}>Sanvi Educational and Charitable Trust</div>
+                        <div style={{ fontWeight: 800, fontSize: 14, letterSpacing: 0.3, lineHeight: 1.15 }}>SIRAH DEMO SCHOOL</div>
+                        <div style={{ fontWeight: 700, fontSize: 10.5, marginTop: 2, letterSpacing: 0.3 }}>Sirah Education Trust</div>
                       </div>
                     </div>
                     <div style={{ textAlign: "center", color: navy }}>

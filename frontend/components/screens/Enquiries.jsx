@@ -500,7 +500,7 @@ function NewEnquiryModal({ classes, onClose, onSubmit }) {
   );
 
   return (
-    <ModalShell title="New admission enquiry" sub="Sanfort International School · Pooranankuppam, Pondicherry" onClose={onClose} width={560}>
+    <ModalShell title="New admission enquiry" sub="Sirah Demo School · Chennai, Tamil Nadu" onClose={onClose} width={560}>
       <form onSubmit={submit} className="card-body" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
         <SectionHead>Student details</SectionHead>
@@ -599,7 +599,7 @@ function ParentCredentialsModal({ info, onClose, onToast }) {
   const { enquiry, student, email, tempPassword, alreadyExisted } = info;
   const phoneDigits = (enquiry?.phone || "").replace(/\D/g, "");
   const message =
-    `Welcome to Sanfort International — admission confirmed for ${student.name} (${formatClassLabel(student.cls)}).\n\n` +
+    `Welcome to Sirah International — admission confirmed for ${student.name} (${formatClassLabel(student.cls)}).\n\n` +
     `Parent portal login:\n` +
     `Email: ${email}\n` +
     (tempPassword ? `Temporary password: ${tempPassword}\n\n` : "") +

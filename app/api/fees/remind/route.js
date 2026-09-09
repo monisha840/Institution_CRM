@@ -103,7 +103,7 @@ export async function POST(req) {
         "",
         "Kindly pay the balance fees.",
         "",
-        "— Sanfort International School",
+        "— Sirah Demo School",
         "Thank you.",
       ].join("\n");
       notifyWhatsApp("fee_reminder", {
@@ -129,7 +129,7 @@ export async function POST(req) {
 
 function defaultReminderMessage(p) {
   const amt = (p.amount || 0).toLocaleString("en-IN");
-  return `Friendly reminder: a fee of ₹${amt} is pending for ${p.name} (${p.cls}). Please clear it at your earliest convenience or contact the school office. — Sanfort International School`;
+  return `Friendly reminder: a fee of ₹${amt} is pending for ${p.name} (${p.cls}). Please clear it at your earliest convenience or contact the school office. — Sirah Demo School`;
 }
 
 export async function GET() {

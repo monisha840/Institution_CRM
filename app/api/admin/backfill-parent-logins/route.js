@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 // Admin-only.
 // Wipes every parent user account and re-creates one fresh login per
 // current student so the email / password follow the deterministic
-// "parent.{slug(name)}@sanfort.com" + "{FirstName}@123" scheme.
+// "parent.{slug(name)}@sirahdemo.school" + "{FirstName}@123" scheme.
 //
 // Use when stale parent users from earlier imports are colliding with
 // freshly-imported students (e.g. random STN-XXXX IDs got reused and

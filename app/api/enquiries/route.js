@@ -88,7 +88,7 @@ export async function POST(req) {
     source: body.source || "Website",
     date: today,
     status: "New",
-    // New fields from the Sanfort admission template — all optional so older
+    // New fields from the Sirah admission template — all optional so older
     // callers don't break. PIN is kept as a string to preserve the leading
     // zeros some PIN codes have.
     dob:    body.dob || null,

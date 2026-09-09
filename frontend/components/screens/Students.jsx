@@ -2132,7 +2132,7 @@ function ProfileModal({ student, onClose, onMessage, onTC, hideContact = false, 
     if (!report) return;
     const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     const s = report.student || student;
-    const schoolName = school?.name || "Sanfort International School";
+    const schoolName = school?.name || "Sirah Demo School";
     const cell = (v, num) => `<td style="padding:4px 6px;border-bottom:1px solid #eee;${num ? "text-align:right" : ""}">${esc(v)}</td>`;
     const th = (h) => `<th style="text-align:left;padding:4px 6px;border-bottom:1px solid #bbb;color:#555;font-weight:600">${esc(h)}</th>`;
     const table = (headers, rowsArr) => `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:4px"><thead><tr>${headers.map(th).join("")}</tr></thead><tbody>${rowsArr.length ? rowsArr.join("") : `<tr><td colspan="${headers.length}" style="padding:6px;color:#999">None</td></tr>`}</tbody></table>`;
@@ -2454,15 +2454,15 @@ function MessageParentModal({ student, onClose, flash }) {
   const TEMPLATES = [
     {
       label: "General check-in",
-      body: `Dear Parent,\n\nThis is a quick note from Sanfort International School regarding ${student.name} (${formatClassLabel(student.cls)}). Please feel free to reach out if you have any questions.\n\n— Sanfort International School`,
+      body: `Dear Parent,\n\nThis is a quick note from Sirah Demo School regarding ${student.name} (${formatClassLabel(student.cls)}). Please feel free to reach out if you have any questions.\n\n— Sirah Demo School`,
     },
     {
       label: "Request a meeting",
-      body: `Dear Parent,\n\nWe would like to meet with you regarding ${student.name} (${formatClassLabel(student.cls)}). Please let us know a convenient time this week.\n\n— Sanfort International School`,
+      body: `Dear Parent,\n\nWe would like to meet with you regarding ${student.name} (${formatClassLabel(student.cls)}). Please let us know a convenient time this week.\n\n— Sirah Demo School`,
     },
     {
       label: "Attendance follow-up",
-      body: `Dear Parent,\n\n${student.name} (${formatClassLabel(student.cls)}) was marked absent recently. Kindly let us know the reason or share an update.\n\n— Sanfort International School`,
+      body: `Dear Parent,\n\n${student.name} (${formatClassLabel(student.cls)}) was marked absent recently. Kindly let us know the reason or share an update.\n\n— Sirah Demo School`,
     },
   ];
   const [body, setBody] = useState(TEMPLATES[0].body);

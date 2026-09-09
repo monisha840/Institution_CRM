@@ -7,12 +7,12 @@
 // yet.
 
 const FALLBACK_SCHOOL = {
-  name: "Sanfort International School",
-  trustName: "Sanvi Educational and Charitable Trust",
+  name: "Sirah Demo School",
+  trustName: "Sirah Education Trust",
   regNo: null,
   pan80g: null,
   contact: null,
-  brand: "Vidyalaya360",
+  brand: "Sirah_CRM",
 };
 
 // Resolve the school identity from `E.SETTINGS` (or any plain settings

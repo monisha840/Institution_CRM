@@ -1,4 +1,4 @@
-# Vidyalaya360 · School CRM
+# Sirah_CRM · School CRM
 
 Fullstack Next.js school ERP / CRM. Two pluggable persistence backends:
 **Supabase** for production (Postgres + RLS) and a local **JSON file** for

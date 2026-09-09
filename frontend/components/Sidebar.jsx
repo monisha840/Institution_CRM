@@ -6,7 +6,7 @@ import { AvatarChip } from "./ui";
 
 // Nav items per role. Five real roles now (admin replaces the old "super"
 // demo; academic_director is brand new).
-export const NAV_BY_ROLE = {
+const RAW_NAV_BY_ROLE = {
   admin: [
     { section: "Trust" },
     { id: "trust",     label: "Overview",     icon: "dashboard" },
@@ -221,6 +221,31 @@ export const NAV_BY_ROLE = {
   ],
 };
 
+// ---------------------------------------------------------------------------
+// Sirah_CRM: modules built specifically for the original charitable-trust
+// client. They are hidden from navigation rather than deleted, so any client
+// that wants them back only needs their id removed from this set.
+// ---------------------------------------------------------------------------
+const TRIMMED_MODULES = new Set([
+  "trust", "donors", "volunteers",
+  "scale", "scale_report", "scale_admin", "scale_advisory",
+]);
+
+// Remove trimmed entries, then drop any section heading that is left with no
+// items under it (otherwise "Trust" would render as an empty bucket).
+function pruneNav(items) {
+  const kept = (items || []).filter((it) => !(it.id && TRIMMED_MODULES.has(it.id)));
+  return kept.filter((it, i) => {
+    if (!it.section) return true;
+    const next = kept.slice(i + 1).find((n) => n.section || n.id);
+    return Boolean(next && next.id);
+  });
+}
+
+export const NAV_BY_ROLE = Object.fromEntries(
+  Object.entries(RAW_NAV_BY_ROLE).map(([role, items]) => [role, pruneNav(items)])
+);
+
 const ROLE_LABEL = {
   admin: "Admin",
   academic_director: "Academic Director",
@@ -243,7 +268,7 @@ function initialsOf(name) {
 // synthetic nav for custom-role users (whose role doesn't appear in
 // NAV_BY_ROLE). The "section" buckets group features in a way that reads
 // naturally on the sidebar.
-const FEATURE_NAV_CATALOG = [
+const RAW_FEATURE_NAV_CATALOG = [
   { section: "Trust" },
   { id: "trust",                 label: "Overview",            icon: "dashboard" },
   { id: "money",                 label: "Finance",             icon: "money" },
@@ -286,6 +311,8 @@ const FEATURE_NAV_CATALOG = [
   { section: "Account" },
   { id: "account",               label: "My account",          icon: "user" },
 ];
+
+const FEATURE_NAV_CATALOG = pruneNav(RAW_FEATURE_NAV_CATALOG);
 
 // True if the role isn't one of the seven canonical ones — i.e. it's a
 // custom role created on the Custom Roles screen. Custom role ids are
@@ -379,7 +406,7 @@ export default function Sidebar({ current, setCurrent, role, user, permissions, 
 
   // Per-role collapsed state, persisted to localStorage so a closed group
   // stays closed across reloads. Default: every group expanded.
-  const storageKey = `vidyalaya360.sidebar.collapsed.${role}`;
+  const storageKey = `sirahcrm.sidebar.collapsed.${role}`;
   const [collapsed, setCollapsed] = useState(() => new Set());
   useEffect(() => {
     try {
@@ -436,11 +463,11 @@ export default function Sidebar({ current, setCurrent, role, user, permissions, 
             The wrapping div keeps the rounded square frame consistent with the
             rest of the design system. */}
         <div className="brand-mark" style={{ background: "#fff", padding: 2, overflow: "hidden" }}>
-          <img src="/logo.png" alt="Sanfort International School" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+          <img src="/logo.png" alt="Sirah Demo School" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
         </div>
         <div className="brand-text">
           <div className="b1">
-            Sanfort<span className="num"> International</span>
+            Sirah<span className="num"> International</span>
           </div>
         </div>
       </div>

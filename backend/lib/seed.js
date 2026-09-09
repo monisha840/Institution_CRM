@@ -1,4 +1,4 @@
-// Seed data — Vidyalaya360 CRM
+// Seed data — Sirah_CRM CRM
 // All sample records have been removed. Only structural metadata remains
 // (class numbers, role definitions, UI defaults). The app starts empty
 // and is populated through the UI / API.

@@ -49,8 +49,8 @@ export async function POST(req) {
   // UPI handle + payee name come from the same Settings row the on-screen
   // QR uses, so the WhatsApp QR is identical to the one shown in-office.
   const settings = await readSettings();
-  const upiId     = settings?.finance?.upi || "sanfort@hdfc";
-  const payeeName = settings?.finance?.upiPayeeName || "Sanfort International School";
+  const upiId     = settings?.finance?.upi || "sirahdemo@hdfc";
+  const payeeName = settings?.finance?.upiPayeeName || "Sirah Demo School";
 
   // Build the standard UPI deep-link with the amount + a transaction note
   // so the parent's UPI app opens pre-filled.
@@ -63,7 +63,7 @@ export async function POST(req) {
   params.set("tr", fee.id);
   const upiUri = `upi://pay?${params.toString()}`;
 
-  // Render the branded QR (blue + orange + Sanfort logo) server-side and
+  // Render the branded QR (blue + orange + Sirah logo) server-side and
   // pass it as raw base64 — Evolution API's sendMedia accepts base64 directly,
   // so the host doesn't need to be publicly reachable from the WhatsApp side.
   let qrImageBase64;
@@ -87,7 +87,7 @@ export async function POST(req) {
     `Ref:    ${fee.id}`,
     "",
     "Open the image in any UPI app to pay. Receipt will be issued automatically once we receive it.",
-    "— Sanfort International School",
+    "— Sirah Demo School",
   ].filter(Boolean).join("\n");
 
   const result = await notifyWhatsApp("fee_qr_send", {

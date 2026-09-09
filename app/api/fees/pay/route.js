@@ -114,7 +114,7 @@ export async function POST(req) {
         `Balance to pay: ${balanceLabel}`,
         "",
         "Thank you for paying the fees.",
-        "— Sanfort International School",
+        "— Sirah Demo School",
       ].join("\n");
 
       // Don't await — let it run in the background.

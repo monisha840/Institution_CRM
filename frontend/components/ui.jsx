@@ -345,7 +345,7 @@ export const UpiQR = ({ size = 180, uri, hint }) => {
       </div>
     );
   }
-  // Branded QR rendered server-side by /api/fees/qr-image — Sanfort blue +
+  // Branded QR rendered server-side by /api/fees/qr-image — Sirah blue +
   // orange with the school logo in the center. 2x size for retina sharpness.
   const src = `/api/fees/qr-image?size=${size * 2}&data=${encodeURIComponent(uri)}`;
   return (

@@ -59,7 +59,7 @@ function inferColumnMap(headers) {
   return map;
 }
 
-// Sanfort register sheets often have title rows above the real header.
+// Sirah register sheets often have title rows above the real header.
 function findHeaderRow(matrix) {
   for (let i = 0; i < Math.min(12, matrix.length); i++) {
     const norms = (matrix[i] || []).map(normHeader);
@@ -438,7 +438,7 @@ export default function ScreenInventory({ E, refresh, role }) {
           )}
           {canEdit && (
             <>
-              <button className="btn" onClick={() => setShowImport(true)} title="Import Sanfort stock register Excel/CSV">
+              <button className="btn" onClick={() => setShowImport(true)} title="Import stock register Excel/CSV">
                 <Icon name="upload" size={13} />Import Excel
               </button>
               <button className="btn" onClick={() => { setMovePreset(null); setShowMove("in"); }} disabled={items.length === 0} title="Purchase / restock — increases balance & purchased">
@@ -1212,7 +1212,7 @@ function ImportInventoryModal({ onClose, onSubmit }) {
   }
 
   return (
-    <ModalShell title="Import stock register" sub="Sanfort Excel layout · blank rows skipped · batch insert" onClose={onClose} width={860}>
+    <ModalShell title="Import stock register" sub="Standard Excel layout · blank rows skipped · batch insert" onClose={onClose} width={860}>
       <form onSubmit={submit} className="card-body" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <input

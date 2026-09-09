@@ -10,7 +10,7 @@ const CAN_IMPORT = new Set(["admin", "principal"]);
 //   { rows: [{ id?, name, category?, description?, cls?, onHand?, qtyPurchased?,
 //              issued?, min?, unitPrice?, totalCost?, supplier?, storageLocation? }, ...] }
 //
-// Bulk-create inventory SKUs from a Sanfort-style stock register spreadsheet.
+// Bulk-create inventory SKUs from a Sirah-style stock register spreadsheet.
 // Uses batch inserts (chunks of 100) — not one DB round-trip per row.
 export async function POST(req) {
   const session = await getSession();

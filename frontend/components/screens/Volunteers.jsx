@@ -5,7 +5,7 @@ import Icon from "../Icon";
 import { KPI, AvatarChip } from "../ui";
 import DocumentsPanel from "../DocumentsPanel";
 
-// Mirror the Sanvi paper form. Order matters — the same order is used in
+// Mirror the Sirah paper form. Order matters — the same order is used in
 // the printed PDF and the on-screen pickers so what staff fill on screen
 // matches what comes out of the printer.
 const AVAIL_OPTIONS    = ["weekdays", "weekends", "both"];
@@ -267,7 +267,7 @@ export default function ScreenVolunteers({ E, refresh, role }) {
   );
 }
 
-// Full Sanvi Volunteer Registration form — eight sections matching the
+// Full Sirah Volunteer Registration form — eight sections matching the
 // printed template (Personal · KYC · Emergency · Education & Skills ·
 // Preferences · References · Medical · Declaration). All fields except
 // Full Name and Phone are optional so staff can save partial entries.
@@ -341,7 +341,7 @@ function AddVolunteerModal({ onClose, onSubmit }) {
   }
 
   return (
-    <ModalShell title="Volunteer Registration" sub="Sanvi Educational and Charitable Trust" onClose={onClose} width={680}>
+    <ModalShell title="Volunteer Registration" sub="Sirah Education Trust" onClose={onClose} width={680}>
       <form onSubmit={submit} className="card-body" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
 
         {/* 1. Personal Details */}
@@ -495,7 +495,7 @@ function AddVolunteerModal({ onClose, onSubmit }) {
           <input type="checkbox" checked={form.declarationAgreed} onChange={(e) => set("declarationAgreed", e.target.checked)} style={{ marginTop: 2 }} />
           <span>
             I hereby declare that the information provided is true and correct. I agree to abide by the rules and
-            regulations of <b>Sanvi Educational and Charitable Trust</b>. I understand that my services are voluntary
+            regulations of <b>Sirah Education Trust</b>. I understand that my services are voluntary
             and I may not be entitled to any remuneration unless otherwise stated.
           </span>
         </label>
@@ -518,7 +518,7 @@ function AddVolunteerModal({ onClose, onSubmit }) {
   );
 }
 
-// Open a print window with the Sanvi Volunteer Registration form, filled in
+// Open a print window with the Sirah Volunteer Registration form, filled in
 // from the saved record. Empty fields render as dotted-line blanks so the
 // office can still hand-fill missing info if needed.
 function printVolunteerForm(v) {
@@ -559,7 +559,7 @@ function printVolunteerForm(v) {
   <div class="head">
     <img src="${window.location.origin}/logo.png" alt="logo" />
     <div class="t">
-      <div class="trust">SANVI EDUCATIONAL AND CHARITABLE TRUST</div>
+      <div class="trust">SIRAH EDUCATION TRUST</div>
       <div class="reg">Reg.No: 2640/2016</div>
       <div class="addr">Kamaraj Salai, (Le PondyRoad), Pooranankuppam, Puducherry – 605 007.</div>
     </div>
@@ -610,7 +610,7 @@ function printVolunteerForm(v) {
   <div class="sect">8. Declaration</div>
   <div class="declar">
     I hereby declare that the information provided is true and correct. I agree to abide by the rules and
-    regulations of Sanvi Educational and Charitable Trust. I understand that my services are voluntary
+    regulations of Sirah Education Trust. I understand that my services are voluntary
     and I may not be entitled to any remuneration unless otherwise stated.
   </div>
   <div class="row" style="margin-top:10px;">Signature of Volunteer: ${filled(v.signatureName || v.name)}</div>

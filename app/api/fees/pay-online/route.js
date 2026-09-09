@@ -34,8 +34,8 @@ export async function POST(req) {
     // checkout deep-link routes to the correct account. Fall back to a
     // safe default if the admin hasn't filled them in yet.
     const settings = await readSettings();
-    const upiId     = settings?.finance?.upi || "sanfort@school";
-    const payeeName = settings?.finance?.upiPayeeName || "Sanfort International School";
+    const upiId     = settings?.finance?.upi || "sirahdemo@hdfc";
+    const payeeName = settings?.finance?.upiPayeeName || "Sirah Demo School";
     const order = {
       orderId: `OR-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 999)}`,
       gateway: "Razorpay (sandbox)",
@@ -111,7 +111,7 @@ export async function POST(req) {
           `Balance to pay: ${balanceLabel}`,
           "",
           "Thank you for paying the fees.",
-          "— Sanfort International School",
+          "— Sirah Demo School",
         ].join("\n");
         notifyWhatsApp("fee_paid", {
           phone,

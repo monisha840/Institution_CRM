@@ -93,7 +93,7 @@ async function notifyParentsOfNewExam(exam, session) {
     exam.maxMarks ? `Max marks: ${exam.maxMarks}` : null,
     "",
     "Please help your child prepare. Marks will appear here once they're entered.",
-    "— Sanfort International School",
+    "— Sirah Demo School",
   ].filter(Boolean).join("\n");
 
   const campaign = `New test · ${exam.subject}`;

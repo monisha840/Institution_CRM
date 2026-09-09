@@ -1,4 +1,4 @@
-// Server-side PNG renderer for the Sanfort fee receipt. Draws the receipt
+// Server-side PNG renderer for the Sirah fee receipt. Draws the receipt
 // straight to a canvas (no HTML / browser needed) and returns a base64
 // data-URI so we can ship it directly through the n8n webhook → Evolution
 // API → WhatsApp without needing a publicly-reachable URL.
@@ -6,7 +6,7 @@
 import { createCanvas } from "@napi-rs/canvas";
 import { feeTypeLabel } from "./format.js";
 
-// Sanfort theme colours — kept in sync with the on-screen receipt preview.
+// Sirah theme colours — kept in sync with the on-screen receipt preview.
 const NAVY = "#1f3a8a";
 const RED  = "#c11d1d";
 const INK  = "#000000";
@@ -22,8 +22,8 @@ function dot(s, max) {
 // Render the full receipt to a PNG buffer. Returns a base64 data-URI string
 // that the WhatsApp Cloud / Evolution API will accept directly as `media`.
 export function renderReceiptPng({
-  schoolName = "SANFORT INTERNATIONAL SCHOOL",
-  trustName  = "Sanvi Educational and Charitable Trust",
+  schoolName = "SIRAH DEMO SCHOOL",
+  trustName  = "Sirah Education Trust",
   regNo      = "SIS/2026",
   address    = "No.45, MG Road, Chennai - 600 001.",
   phone      = "9876 543 210",

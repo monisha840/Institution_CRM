@@ -35,7 +35,7 @@ export async function POST(req) {
 
   const message =
     body?.message?.trim() ||
-    `Test message from Sanfort International School CRM at ${new Date().toLocaleString("en-IN")}.`;
+    `Test message from Sirah Demo School CRM at ${new Date().toLocaleString("en-IN")}.`;
 
   const result = await notifyWhatsApp("test", { phone, message });
   try {

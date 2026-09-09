@@ -106,13 +106,13 @@ const SCREENS = {
 };
 
 const DEFAULT_SCREEN_BY_ROLE = {
-  admin: "trust",
+  admin: "dashboard",
   academic_director: "dashboard",
   principal: "dashboard",
   teacher: "academic",
   parent: "dashboard",
   school_accountant: "dashboard",
-  trust_accountant: "trust",
+  trust_accountant: "money",
   transport_manager: "transport",
   fees_manager: "fees",
 };
@@ -168,14 +168,14 @@ export default function AppShell({ initialData, session }) {
 
   useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem("vidyalaya360.tweaks") || "null");
+      const saved = JSON.parse(localStorage.getItem("sirahcrm.tweaks") || "null");
       if (saved) {
         // Drop any persisted role — session is the source of truth now.
         const { role: _drop, ...rest } = saved;
         setSettings((s) => ({ ...s, ...rest }));
       }
       // Per-role last-screen so different logins don't fight over the slot.
-      const screen = localStorage.getItem(`vidyalaya360.screen.${role}`);
+      const screen = localStorage.getItem(`sirahcrm.screen.${role}`);
       if (screen && SCREENS[screen]) {
         const allowed = (NAV_BY_ROLE[role] || []).filter((n) => !n.section).map((n) => n.id);
         if (allowed.includes(screen)) setCurrent(screen);
@@ -205,7 +205,7 @@ export default function AppShell({ initialData, session }) {
 
   useEffect(() => {
     if (!hydrated) return;
-    localStorage.setItem("vidyalaya360.tweaks", JSON.stringify(settings));
+    localStorage.setItem("sirahcrm.tweaks", JSON.stringify(settings));
   }, [settings, hydrated]);
 
   // Once-per-session reminder toast. We dedupe by user-id + day so a
@@ -217,7 +217,7 @@ export default function AppShell({ initialData, session }) {
     if (!session?.id) return;
     if (typeof window === "undefined") return;
     const dayKey = new Date().toISOString().slice(0, 10);
-    const key = `vidyalaya360.notifToast.${session.id}.${dayKey}`;
+    const key = `sirahcrm.notifToast.${session.id}.${dayKey}`;
     try { if (sessionStorage.getItem(key)) return; } catch {}
     let alerts = [];
     try { alerts = buildAlerts(data) || []; } catch { alerts = []; }
@@ -241,7 +241,7 @@ export default function AppShell({ initialData, session }) {
 
   useEffect(() => {
     if (!hydrated) return;
-    localStorage.setItem(`vidyalaya360.screen.${role}`, current);
+    localStorage.setItem(`sirahcrm.screen.${role}`, current);
   }, [current, role, hydrated]);
 
   // Snap to a sensible default whenever:
@@ -659,7 +659,7 @@ export default function AppShell({ initialData, session }) {
             onClick={async () => {
               try { await fetch("/api/auth/logout", { method: "POST" }); } catch {}
               try {
-                Object.keys(localStorage).filter((k) => k.startsWith("vidyalaya360.")).forEach((k) => localStorage.removeItem(k));
+                Object.keys(localStorage).filter((k) => k.startsWith("sirahcrm.")).forEach((k) => localStorage.removeItem(k));
               } catch {}
               window.location.href = "/login";
             }}

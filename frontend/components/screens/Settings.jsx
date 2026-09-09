@@ -43,7 +43,7 @@ const SECTIONS = [
       { k: "feeCycle",     label: "Fee cycle" },
       // UPI ID + payee name drive the QR shown on the Fees · Collect screen
       // and the Pay-online checkout. Set both for the QR to be scannable.
-      { k: "upi",          label: "UPI ID",          hint: "e.g. sanfort@hdfc — used for the fees QR scanner" },
+      { k: "upi",          label: "UPI ID",          hint: "e.g. sirahdemo@hdfc — used for the fees QR scanner" },
       { k: "upiPayeeName", label: "UPI payee name",  hint: "Shown to the parent's UPI app (max 40 chars)" },
       { k: "gstPan",       label: "GST · PAN for invoices" },
     ],

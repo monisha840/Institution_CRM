@@ -361,7 +361,7 @@ function PrintTcModal({ tc, onClose }) {
       <div class="head">
         <img src="${window.location.origin}/logo.png" alt="logo" />
         <div class="school">
-          <div class="school-name">SANFORT INTERNATIONAL SCHOOL</div>
+          <div class="school-name">SIRAH DEMO SCHOOL</div>
           <div class="addr">No. 57, KAMARAJ SALAI POORANANKUPPAM PUDUCHERRY -605007</div>
           <div class="reco">(RECOGNISED BY THE GOVT. OF PUDUCHERRY)</div>
         </div>
@@ -377,7 +377,7 @@ function PrintTcModal({ tc, onClose }) {
 
       <div class="item">
         <div class="l">1. a) Name of the School</div>
-        <div class="r"><span class="colon">:</span><span class="val">SANFORT INTERNATIONAL SCHOOL</span></div>
+        <div class="r"><span class="colon">:</span><span class="val">SIRAH DEMO SCHOOL</span></div>
       </div>
       <div class="item subline">
         <div class="l">b) Name of the Education District / Revenue District</div>
@@ -461,7 +461,7 @@ function PrintTcModal({ tc, onClose }) {
         </thead>
         <tbody>
           <tr>
-            <td>SANFORT<br/>INTERNATIONAL<br/>SCHOOL</td>
+            <td>SIRAH<br/>DEMO<br/>SCHOOL</td>
             <td>${academicYear}</td>
             <td>${escape(tc.cls || "")}</td>
             <td>TAMIL</td>

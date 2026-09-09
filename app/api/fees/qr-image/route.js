@@ -4,7 +4,7 @@ import { renderBrandedQrBuffer } from "@/lib/qr-image";
 export const dynamic = "force-dynamic";
 
 // GET /api/fees/qr-image?data=<encoded UPI URI>&size=300
-// Returns a PNG of the Sanfort-branded QR (blue + orange + logo).
+// Returns a PNG of the Sirah-branded QR (blue + orange + logo).
 // Used both on-screen (<UpiQR src="/api/fees/qr-image?data=...">) and
 // indirectly inside the WhatsApp send-qr flow.
 export async function GET(req) {

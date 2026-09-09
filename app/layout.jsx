@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Sanfort International School ",
+  title: "Sirah_CRM",
   description: "School ERP & CRM control tower — multi-school trust for admin, principal, teacher and parent views.",
   icons: { icon: "/logo.png" },
 };

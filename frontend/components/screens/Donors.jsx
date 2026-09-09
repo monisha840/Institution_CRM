@@ -950,7 +950,7 @@ function ReceiptModal({ receipt, onClose }) {
         <img src="${window.location.origin}/logo.png" alt="logo" style="width:56px;height:56px;object-fit:contain;flex-shrink:0;" />
         <div style="flex:1;text-align:left;">
           <div class="title">Donation receipt</div>
-          <div class="sub">Sanfort International School &middot; Sanvi Educational and Charitable Trust</div>
+          <div class="sub">Sirah Demo School &middot; Sirah Education Trust</div>
         </div>
       </div>
       <div class="row"><span class="lbl">Receipt #</span><span><b>${receipt.id}</b></span></div>

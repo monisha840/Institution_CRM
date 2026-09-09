@@ -51,7 +51,7 @@ export default function LoginScreen({ next }) {
           <div className="lp-brand">
             <img src="/logo.png" alt="" className="lp-logo" />
             <div className="lp-brand-text">
-              <div className="lp-school">Sanfort <span>International</span></div>
+              <div className="lp-school">Sirah <span>International</span></div>
             </div>
           </div>
 
@@ -72,7 +72,7 @@ export default function LoginScreen({ next }) {
             ))}
           </ul>
 
-          <div className="lp-foot">© {year} Sanfort International School · All rights reserved</div>
+          <div className="lp-foot">© {year} Sirah Demo School · All rights reserved</div>
         </div>
       </aside>
 
@@ -83,7 +83,7 @@ export default function LoginScreen({ next }) {
           <div className="lp-brand-mobile">
             <img src="/logo.png" alt="" />
             <div>
-              <div className="lp-school">Sanfort <span>International</span></div>
+              <div className="lp-school">Sirah <span>International</span></div>
             </div>
           </div>
 
@@ -163,7 +163,7 @@ export default function LoginScreen({ next }) {
             </a>
           </div>
 
-          <div className="lp-foot-mobile">© {year} Sanfort International School</div>
+          <div className="lp-foot-mobile">© {year} Sirah Demo School</div>
         </div>
       </main>
 

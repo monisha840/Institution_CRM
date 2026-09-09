@@ -12,7 +12,7 @@ export default async function DonorFormPage() {
   // Fall back to the bundled defaults if settings haven't been written.
   // Pull the trust identity so the form shows the right school name.
   // Fall back to the bundled defaults if settings haven't been written.
-  let school = { name: "Sanfort International School", trustName: "Sanvi Educational and Charitable Trust" };
+  let school = { name: "Sirah Demo School", trustName: "Sirah Education Trust" };
   try {
     const settings = await readSettings();
     const trust = settings?.trust || {};
