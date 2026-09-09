@@ -36,8 +36,69 @@ function useTodayDayName() {
   return day;
 }
 
+
+// ---------------------------------------------------------------------------
+// Cash pulse series.
+//
+// Derived from the receipts and expenses already on screen rather than from a
+// stored series, so the chart is correct the moment a fee is collected or an
+// expense logged — and it can never drift from the numbers printed beneath it.
+// Figures are in lakhs to match the card's stated axis.
+// ---------------------------------------------------------------------------
+const WEEKS_SHOWN = 8;
+const LAKH = 100000;
+
+function weekStart(d) {
+  const x = new Date(d);
+  if (Number.isNaN(x.getTime())) return null;
+  x.setHours(0, 0, 0, 0);
+  // Monday-based weeks: getDay() is 0 for Sunday, which we treat as day 7.
+  x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
+  return x;
+}
+
+function buildCashSeries(receipts, expenses) {
+  const thisWeek = weekStart(new Date());
+  if (!thisWeek) return [];
+
+  // Pre-create the buckets so a quiet week renders as a genuine zero rather
+  // than vanishing and making the trend look denser than it was.
+  const buckets = [];
+  const index = new Map();
+  for (let i = WEEKS_SHOWN - 1; i >= 0; i--) {
+    const start = new Date(thisWeek);
+    start.setDate(start.getDate() - i * 7);
+    const key = start.toISOString().slice(0, 10);
+    const row = {
+      w: start.toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
+      inc: 0,
+      exp: 0,
+    };
+    buckets.push(row);
+    index.set(key, row);
+  }
+
+  const add = (when, amount, field) => {
+    const start = weekStart(when);
+    if (!start) return;
+    const row = index.get(start.toISOString().slice(0, 10));
+    if (!row) return;                       // older than the window
+    const n = Number(amount);
+    if (Number.isFinite(n)) row[field] += n;
+  };
+
+  for (const r of receipts || []) add(r?.paidAt, r?.amount, "inc");
+  for (const e of expenses || []) add(e?.date, e?.amount, "exp");
+
+  const round2 = (n) => Math.round((n / LAKH) * 100) / 100;
+  const series = buckets.map((r) => ({ ...r, inc: round2(r.inc), exp: round2(r.exp) }));
+  // Nothing dated inside the window: let the card show its empty state rather
+  // than eight flat zeroes pretending to be a trend.
+  return series.some((r) => r.inc > 0 || r.exp > 0) ? series : [];
+}
+
 export default function ScreenDashboard({ E, role, session, refresh, setCurrent, onOpenItem }) {
-  const { KPIS, CLASS_STRENGTH, RECENT_FEES, PENDING_FEES, ACTIVITIES, ROUTES, INCOME_SERIES } = E;
+  const { KPIS, CLASS_STRENGTH, RECENT_FEES, PENDING_FEES, ACTIVITIES, ROUTES, INCOME_SERIES, EXPENSES } = E;
   const isParent = role === "parent";
   const child = isParent ? (E.ADDED_STUDENTS || [])[0] : null;
 
@@ -268,7 +329,7 @@ export default function ScreenDashboard({ E, role, session, refresh, setCurrent,
           </div>
           <div className="card-body" style={{ padding: "10px 14px 14px" }}>
             <LineBarChart
-              data={INCOME_SERIES}
+              data={(INCOME_SERIES && INCOME_SERIES.length) ? INCOME_SERIES : buildCashSeries(RECENT_FEES, EXPENSES)}
               h={240}
               lineKeys={["inc"]}
               barKey="exp"
@@ -278,7 +339,7 @@ export default function ScreenDashboard({ E, role, session, refresh, setCurrent,
             />
             {(() => {
               const incomeYtd = (RECENT_FEES || []).reduce((a, f) => a + (f.amount || 0), 0);
-              const expenseYtd = 0;
+              const expenseYtd = (EXPENSES || []).reduce((a, e) => a + (Number(e.amount) || 0), 0);
               const surplus = incomeYtd - expenseYtd;
               const margin = incomeYtd > 0 ? Math.round((surplus / incomeYtd) * 100) : 0;
               return (
@@ -291,7 +352,11 @@ export default function ScreenDashboard({ E, role, session, refresh, setCurrent,
                   <div>
                     <div className="mstrip-lbl" style={{ marginTop: 0 }}>Expense YTD</div>
                     <div className="mstrip-val" style={{ marginTop: 5 }}>{moneyK(expenseYtd)}</div>
-                    <div className="mstrip-sub">not tracked on this screen</div>
+                    <div className="mstrip-sub">
+                      {(EXPENSES || []).length
+                        ? `${(EXPENSES || []).length} entr${(EXPENSES || []).length === 1 ? "y" : "ies"}`
+                        : "nothing logged yet"}
+                    </div>
                   </div>
                   <div>
                     <div className="mstrip-lbl" style={{ marginTop: 0 }}>Net surplus</div>

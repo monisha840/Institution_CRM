@@ -216,8 +216,11 @@ const pending_fees = AGEING_OFFSETS.map((off, i) => {
 });
 
 const METHODS = ["UPI", "Cash", "Bank transfer", "Cheque"];
-const recent_fees = Array.from({ length: 12 }, (_, i) => {
+// Dated across the last ~8 weeks so the dashboard's Cash pulse chart shows a
+// trend rather than one spike. 18 receipts, 2-3 per week.
+const recent_fees = Array.from({ length: 18 }, (_, i) => {
   const s = students[(i * 5 + 1) % students.length];
+  const ago = 2 + Math.floor(i * 3.1);   // 2 .. ~55 days
   return {
     id: `RF-${3001 + i}`,
     student_id: s.id,
@@ -225,11 +228,55 @@ const recent_fees = Array.from({ length: 12 }, (_, i) => {
     cls: s.cls,
     amount: (COLLEGE ? 18000 : 6000) + (i % 5) * (COLLEGE ? 4400 : 2200),
     method: pick(METHODS, i),
-    time: `${i * 2 + 1}d ago`,
+    time: `${ago}d ago`,
     status: "paid",
-    paid_at: daysAgo(i * 2 + 1).toISOString(),
+    paid_at: daysAgo(ago).toISOString(),
   };
 });
+
+// ---- expenses -------------------------------------------------------------
+// The Cash pulse chart plots expenses as bars against the income line, and the
+// Expense YTD tile counts them. Without these the card rendered "No data for
+// this period" over a ₹0 expense figure.
+const EXPENSE_DEF = COLLEGE ? [
+  ["Salaries",       "Faculty payroll",            420000, "Payroll"],
+  ["Utilities",      "Electricity - main block",    38000, "TNEB"],
+  ["Lab",            "Computer lab AMC",            65000, "TechCare Systems"],
+  ["Maintenance",    "Campus housekeeping",         42000, "CleanCo"],
+  ["Transport",      "Diesel - college buses",      58000, "IndianOil"],
+  ["Library",        "Journal subscriptions",       75000, "Elsevier India"],
+  ["Utilities",      "Internet leased line",        24000, "ACT Fibernet"],
+  ["Lab",            "Lab consumables",             31000, "SciSupply"],
+  ["Maintenance",    "Bus servicing - RT-02",       18500, "Sri Auto Works"],
+  ["Events",         "Tech symposium",              46000, "Various"],
+  ["Salaries",       "Support staff payroll",       96000, "Payroll"],
+  ["Utilities",      "Water tanker supply",         12500, "Metro Water"],
+] : [
+  ["Salaries",       "Teaching staff payroll",     380000, "Payroll"],
+  ["Utilities",      "Electricity - main block",    32000, "TNEB"],
+  ["Stationery",     "Exam paper + printing",       28000, "Sri Print House"],
+  ["Maintenance",    "Campus housekeeping",         36000, "CleanCo"],
+  ["Transport",      "Diesel - school buses",       54000, "IndianOil"],
+  ["Library",        "New book purchase",           41000, "Higginbothams"],
+  ["Utilities",      "Internet + phone",            18000, "ACT Fibernet"],
+  ["Sports",         "Sports equipment",            22500, "Decathlon"],
+  ["Maintenance",    "Bus servicing - RT-02",       18500, "Sri Auto Works"],
+  ["Events",         "Annual day arrangements",     52000, "Various"],
+  ["Salaries",       "Support staff payroll",       88000, "Payroll"],
+  ["Utilities",      "Water tanker supply",         12500, "Metro Water"],
+];
+const PAY_METHODS = ["Bank transfer", "UPI", "Cheque", "Cash"];
+const expenses = EXPENSE_DEF.map(([category, memo, amount, vendor], i) => ({
+  id: `EXP-${8001 + i}`,
+  scope: "school",                       // school-scope: the trust ledger is trimmed
+  category,
+  amount,
+  vendor,
+  memo,
+  date: iso(daysAgo(3 + Math.floor(i * 4.6))),   // 3 .. ~54 days
+  payment_method: pick(PAY_METHODS, i),
+  recorded_by: staff[7].name,            // the accountant
+}));
 
 // ---- admissions enquiries -------------------------------------------------
 const SOURCES = COLLEGE
@@ -449,6 +496,7 @@ async function main() {
   await upsert("staff", staff, "id");
   await upsert("pending_fees", pending_fees, "id");
   await upsert("recent_fees", recent_fees, "id");
+  await upsert("expenses", expenses, "id");
   await upsert("enquiries", enquiries, "id");
   await upsert("exams", exams, "id");
   await upsert("exam_marks", exam_marks, "id");
