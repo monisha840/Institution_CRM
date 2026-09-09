@@ -53,7 +53,7 @@ alter table subjects add column if not exists credits int default 4;
 -- from Settings → Institution. Nothing is migrated when it changes: the same
 -- records are simply presented with different vocabulary.
 insert into app_settings (section, key, value)
-values ('school', 'institutionType', '"school"')
+values ('school', 'institutionType', 'school')
 on conflict (section, key) do nothing;
 
 notify pgrst, 'reload schema';
