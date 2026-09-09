@@ -1,0 +1,15 @@
+node_modules/
+.next/
+out/
+dist/
+build/
+.env*.local
+.DS_Store
+*.log
+data/db.json
+.claude/
+# Legacy standalone cinematic sub-app (post-launch, never deployed from here).
+Stansford CRM/
+# Working note, not part of the deploy.
+DEPLOYMENT.md
+data/db.json.backup-*

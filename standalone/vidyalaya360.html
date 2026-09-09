@@ -1,0 +1,766 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Project Report · Stansford International HR.Sec.School · Vidyalaya360</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  /* ================== design tokens ================== */
+  :root {
+    --bg: #f4efe6;
+    --bg-2: #ebe4d6;
+    --card: #fbf8f1;
+    --card-2: #f6f1e5;
+    --rule: #e4dcc9;
+    --rule-2: #eae2d0;
+    --ink: #1a1612;
+    --ink-2: #3d362d;
+    --ink-3: #7a6f61;
+    --ink-4: #a89d8a;
+    --accent: #c8510a;
+    --accent-2: #a3420a;
+    --accent-soft: #fbeada;
+    --mint: #d8ebd4;   --mint-ink: #4a7a54;
+    --peach: #f7dcc4;  --peach-ink: #b2622a;
+    --cream: #f0e4c8;  --cream-ink: #8a6f2e;
+    --sky: #d6e4ed;    --sky-ink: #4a6c85;
+    --rose: #f2d5d2;   --rose-ink: #a0514a;
+    --lilac: #e4dbec;  --lilac-ink: #6a548a;
+    --ok: #4a7a54;     --ok-soft: #dfecd8;
+    --warn: #b07c28;   --warn-soft: #f3e6c8;
+    --bad: #b44a3c;    --bad-soft: #f3d8d2;
+    --info: #4a6c85;   --info-soft: #d8e4ec;
+    --shadow-sm: 0 1px 2px rgba(58,42,20,.04);
+    --shadow:    0 2px 6px rgba(58,42,20,.05), 0 1px 2px rgba(58,42,20,.03);
+    --shadow-lg: 0 12px 32px rgba(58,42,20,.1), 0 2px 6px rgba(58,42,20,.06);
+    --font-sans:  "Outfit", system-ui, -apple-system, Segoe UI, sans-serif;
+    --font-serif: "DM Serif Display", Georgia, serif;
+    --font-mono:  "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(200,170,120,.05) 0%, transparent 40%),
+      radial-gradient(circle at 80% 70%, rgba(180,140,80,.04) 0%, transparent 40%);
+  }
+  .doc { max-width: 1080px; margin: 0 auto; padding: 80px 56px 120px; }
+
+  /* ================== cover ================== */
+  .cover { border-bottom: 1px solid var(--rule); padding-bottom: 56px; margin-bottom: 48px; }
+  .eyebrow { color: var(--ink-3); font-size: 11px; text-transform: uppercase; letter-spacing: .14em; font-weight: 500; margin-bottom: 18px; }
+  .doc-title { font-family: var(--font-serif); font-size: 64px; line-height: 1; letter-spacing: -.02em; margin: 0 0 24px; }
+  .doc-title .amber { color: var(--accent); font-style: italic; }
+  .doc-sub { font-size: 18px; color: var(--ink-2); max-width: 720px; line-height: 1.5; margin-bottom: 28px; }
+  .meta { display: flex; gap: 32px; flex-wrap: wrap; color: var(--ink-3); font-size: 13px; }
+  .meta div { display: flex; flex-direction: column; }
+  .meta .l { font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em; font-weight: 500; color: var(--ink-3); }
+  .meta .v { color: var(--ink); font-family: var(--font-mono); font-size: 12px; margin-top: 4px; }
+
+  /* ================== sections ================== */
+  h2 { font-family: var(--font-serif); font-size: 36px; font-weight: 400; letter-spacing: -.02em; margin: 80px 0 8px; line-height: 1.1; }
+  h2 + .lede { color: var(--ink-3); font-size: 14px; margin-bottom: 28px; max-width: 720px; }
+  h3 { font-family: var(--font-serif); font-size: 22px; font-weight: 400; letter-spacing: -.015em; margin: 36px 0 10px; }
+  h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-3); font-weight: 500; margin: 22px 0 8px; }
+  p { margin: 0 0 14px; max-width: 760px; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--accent-soft); }
+  a:hover { border-bottom-color: var(--accent); }
+
+  code, .mono { font-family: var(--font-mono); font-size: 12.5px; }
+  code { background: var(--card-2); padding: 1px 6px; border-radius: 4px; color: var(--ink-2); }
+  pre { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 16px 18px; overflow-x: auto; font-size: 12px; line-height: 1.55; box-shadow: var(--shadow-sm); }
+
+  /* ================== cards ================== */
+  .grid { display: grid; gap: 18px; }
+  .g-2 { grid-template-columns: 1fr 1fr; }
+  .g-3 { grid-template-columns: repeat(3, 1fr); }
+  .g-4 { grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 760px) { .g-2, .g-3, .g-4 { grid-template-columns: 1fr; } }
+
+  .card { background: var(--card); border: 1px solid var(--rule); border-radius: 14px; padding: 20px 22px; box-shadow: var(--shadow-sm); }
+  .card .num { font-family: var(--font-serif); font-size: 36px; line-height: 1; letter-spacing: -.02em; color: var(--ink); }
+  .card .lbl { font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-3); font-weight: 500; margin-bottom: 10px; }
+  .card .sub { font-size: 12px; color: var(--ink-3); margin-top: 6px; }
+
+  .puck { width: 36px; height: 36px; border-radius: 50%; display: inline-grid; place-items: center; background: var(--mint); color: var(--mint-ink); margin-bottom: 12px; font-weight: 600; font-size: 14px; }
+  .puck.peach { background: var(--peach); color: var(--peach-ink); }
+  .puck.cream { background: var(--cream); color: var(--cream-ink); }
+  .puck.sky   { background: var(--sky);   color: var(--sky-ink); }
+  .puck.rose  { background: var(--rose);  color: var(--rose-ink); }
+  .puck.lilac { background: var(--lilac); color: var(--lilac-ink); }
+
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+  .tag { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 999px; background: var(--card); color: var(--ink-2); border: 1px solid var(--rule); font-size: 11.5px; font-weight: 500; }
+  .tag.accent { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+  .tag.ok { background: var(--ok-soft); color: var(--ok); border-color: transparent; }
+  .tag.warn { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+  .tag.info { background: var(--info-soft); color: var(--info); border-color: transparent; }
+
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  th { text-align: left; color: var(--ink-3); font-weight: 500; font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; border-bottom: 1px solid var(--rule); padding: 10px 12px; }
+  td { padding: 12px; border-bottom: 1px solid var(--rule-2); font-size: 13px; vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+
+  .ascii { background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 22px 26px; font-family: var(--font-mono); font-size: 12px; line-height: 1.65; color: var(--ink-2); white-space: pre; overflow-x: auto; box-shadow: var(--shadow-sm); }
+
+  .timeline { border-left: 2px solid var(--rule); padding-left: 22px; margin: 16px 0; }
+  .timeline .item { margin-bottom: 18px; position: relative; }
+  .timeline .item::before { content: ""; position: absolute; left: -28px; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .timeline .when { font-family: var(--font-mono); font-size: 11px; color: var(--ink-4); }
+  .timeline .what { font-size: 13.5px; color: var(--ink-2); margin-top: 2px; }
+  .timeline .item.minor::before { background: var(--ink-4); box-shadow: 0 0 0 3px var(--rule-2); }
+
+  .callout { background: var(--card); border-left: 3px solid var(--accent); border-radius: 0 10px 10px 0; padding: 14px 18px; margin: 16px 0; color: var(--ink-2); font-size: 13.5px; line-height: 1.6; }
+  .callout strong { color: var(--ink); font-weight: 500; }
+
+  /* feature blocks */
+  .screen { background: var(--card); border: 1px solid var(--rule); border-radius: 14px; padding: 24px 26px; margin: 18px 0; box-shadow: var(--shadow-sm); }
+  .screen-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 6px; flex-wrap: wrap; }
+  .screen-head .num { font-family: var(--font-mono); font-size: 12px; color: var(--ink-4); width: 22px; }
+  .screen-head h3 { margin: 0; }
+  .screen-head .roles { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--ink-3); margin-left: auto; }
+  .screen-purpose { color: var(--ink-3); font-size: 13.5px; max-width: none; margin: 0 0 14px; }
+  .screen ul { padding-left: 18px; margin: 8px 0 4px; }
+  .screen ul li { margin: 5px 0; font-size: 13px; line-height: 1.55; color: var(--ink-2); }
+  .screen ul li strong { color: var(--ink); font-weight: 500; }
+  .screen .persists { font-size: 11.5px; color: var(--ink-4); margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--rule-2); }
+  .screen .persists code { background: transparent; color: var(--ink-3); padding: 0; }
+
+  hr { border: 0; height: 1px; background: var(--rule); margin: 56px 0; }
+
+  .foot { margin-top: 80px; padding-top: 32px; border-top: 1px solid var(--rule); color: var(--ink-3); font-size: 12px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+
+  @media print {
+    body { background: #fff; background-image: none; }
+    .doc { padding: 24px; max-width: none; }
+    h2 { page-break-before: auto; margin-top: 40px; }
+    .card, pre, .ascii { box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+<div class="doc">
+
+<!-- COVER -->
+<header class="cover">
+  <div class="eyebrow">Project Report · Fullstack Application Engineering</div>
+  <h1 class="doc-title">Vidyalaya<span class="amber">360</span><br/>School Control Tower</h1>
+  <div class="doc-sub">
+    A fullstack school ERP &amp; CRM built for <strong>Stansford International HR.Sec.School</strong> —
+    one operator console covering admissions, fees, academic logs, transport,
+    inventory, donors, complaints, automation, audit and trust governance.
+    Built with Next.js 14, deployed against Supabase Postgres, with a portable
+    standalone build for offline demos.
+  </div>
+  <div class="meta">
+    <div><span class="l">School</span><span class="v">Stansford International HR.Sec.School</span></div>
+    <div><span class="l">Stack</span><span class="v">Next.js 14 · React 18 · Supabase</span></div>
+    <div><span class="l">Repository</span><span class="v">github.com/aakashkummar-workspace/Stansford_crm</span></div>
+    <div><span class="l">Status</span><span class="v">Production-ready · v1.0</span></div>
+  </div>
+</header>
+
+<!-- SUMMARY -->
+<section>
+<h2>Executive summary</h2>
+<p class="lede">What it is, who it serves, and why it exists.</p>
+
+<p>
+  Vidyalaya360 is a single web console that replaces the half-dozen disconnected
+  spreadsheets, WhatsApp groups and paper registers a typical Indian K-12 school
+  runs on today. One application; four roles (Super Admin / Principal / Teacher /
+  Parent); eighteen screens; one source of truth backed by a real Postgres database.
+</p>
+<p>
+  The brief was to make every action a school's office actually performs in a day —
+  taking an admission, collecting a fee, logging a daily class report, marking a
+  bus rider absent, raising a complaint — possible from a single screen, with a
+  full audit trail and zero data loss. That's what this report describes.
+</p>
+
+<div class="grid g-4" style="margin-top: 28px;">
+  <div class="card"><div class="puck">18</div><div class="lbl">Screens</div><div class="num">18</div><div class="sub">across 4 user roles</div></div>
+  <div class="card"><div class="puck peach">10</div><div class="lbl">API endpoints</div><div class="num">10</div><div class="sub">REST · server-only writes</div></div>
+  <div class="card"><div class="puck cream">9</div><div class="lbl">Postgres tables</div><div class="num">9</div><div class="sub">RLS-enabled, indexed</div></div>
+  <div class="card"><div class="puck sky">2</div><div class="lbl">Pluggable backends</div><div class="num">2</div><div class="sub">Supabase · local file</div></div>
+</div>
+</section>
+
+<hr/>
+
+<!-- STACK -->
+<section>
+<h2>Technology stack</h2>
+<p class="lede">A small, modern stack chosen for ergonomics, not novelty.</p>
+
+<div class="grid g-2">
+  <div class="card">
+    <h4>Frontend</h4>
+    <p style="margin: 0;">Next.js 14 App Router with React 18 Server &amp; Client Components. Styled
+    with hand-written CSS variables (no Tailwind, no UI kit). Fonts: DM Serif
+    Display for editorial headings, Outfit for UI, JetBrains Mono for numerics.</p>
+    <div class="tags">
+      <span class="tag accent">Next.js 14.2</span>
+      <span class="tag accent">React 18.3</span>
+      <span class="tag">CSS variables</span>
+      <span class="tag">Google Fonts</span>
+    </div>
+  </div>
+  <div class="card">
+    <h4>Backend</h4>
+    <p style="margin: 0;">Server-side API routes (one per resource) talking to Supabase via the
+    official JS SDK. The server uses the <code>service_role</code> key to bypass
+    Row-Level Security; the anon key is never used for writes.</p>
+    <div class="tags">
+      <span class="tag ok">Next.js API routes</span>
+      <span class="tag ok">@supabase/supabase-js</span>
+      <span class="tag">Service-role auth</span>
+    </div>
+  </div>
+  <div class="card">
+    <h4>Database</h4>
+    <p style="margin: 0;">Supabase-hosted Postgres. 9 tables, RLS enabled on every table, idempotent
+    schema (every <code>CREATE</code> uses <code>if not exists</code>), JSONB column
+    for nested route stops, composite primary keys for the daily-log upsert.</p>
+    <div class="tags">
+      <span class="tag info">Supabase</span>
+      <span class="tag info">Postgres 15</span>
+      <span class="tag">Row-Level Security</span>
+      <span class="tag">JSONB</span>
+    </div>
+  </div>
+  <div class="card">
+    <h4>Persistence fallback</h4>
+    <p style="margin: 0;">When the three Supabase env vars are absent the same async API silently
+    falls back to a local JSON file at <code>data/db.json</code> — useful for
+    offline demos and local dev with zero setup.</p>
+    <div class="tags">
+      <span class="tag warn">Optional</span>
+      <span class="tag">JSON file store</span>
+      <span class="tag">Same async API</span>
+    </div>
+  </div>
+</div>
+</section>
+
+<hr/>
+
+<!-- ARCHITECTURE -->
+<section>
+<h2>Architecture at a glance</h2>
+<p class="lede">Server renders the empty shell; client takes over for interactivity.</p>
+
+<div class="ascii">  Browser                      Next.js server                 Supabase / Postgres
+  ────────                     ──────────────                 ───────────────────
+  ┌──────────────┐  initial   ┌──────────────────┐  reads    ┌──────────────────┐
+  │              │ ─────────► │ app/page.jsx     │ ────────► │ readAllData()    │
+  │  React tree  │   GET /    │ (server comp.)   │           │ → 9 parallel     │
+  │  (AppShell)  │            │  await readAll() │           │   SELECTs        │
+  │              │ ◄───────── │  → JSON props    │ ◄──────── │                  │
+  │              │   SSR HTML └──────────────────┘           │                  │
+  │              │                                           │                  │
+  │              │  fetch     ┌──────────────────┐  insert   │                  │
+  │  user clicks │ ─────────► │ /api/students    │ ────────► │ INSERT students  │
+  │  "Admit"     │   POST     │  (route.js)      │           │ INSERT pending   │
+  │              │            │  await           │           │ INSERT audit_log │
+  │              │            │  addStudent()    │           │                  │
+  │              │ ◄───────── │  + addPendingFee │◄──────────│                  │
+  │              │   { ok }   │  + logAudit()    │           │                  │
+  │  refresh()   │ ─────────► │ /api/data        │ ────────► │ SELECT * FROM …  │
+  │              │ ◄───────── │  readAllData()   │ ◄──────── │                  │
+  └──────────────┘            └──────────────────┘           └──────────────────┘
+                                                                                  </div>
+
+<p style="margin-top: 16px;">
+  Every mutation flows server-side through one of the API routes. The client never
+  talks to Supabase directly — that's how the secret service-role key stays out of
+  the browser. After every mutation the client calls <code>refresh()</code>, which
+  re-fetches <code>/api/data</code>, so the UI reflects DB state on every interaction.
+</p>
+</section>
+
+<hr/>
+
+<!-- ROLES -->
+<section>
+<h2>Four roles, one application</h2>
+<p class="lede">The same data, framed for whoever's looking at it.</p>
+
+<div class="grid g-2">
+  <div class="card">
+    <h4>Super Admin · Trust governance</h4>
+    <p>Roll-up across multiple schools, donor pipeline, compliance heatmap,
+    user management and the audit log. Default landing: <em>Trust overview</em>.</p>
+    <div class="tags">
+      <span class="tag">Trust</span><span class="tag">Schools</span>
+      <span class="tag">Finance</span><span class="tag">Donors</span>
+      <span class="tag">Users &amp; Roles</span><span class="tag">Audit log</span>
+      <span class="tag">Settings</span>
+    </div>
+  </div>
+  <div class="card">
+    <h4>Principal · Operating console</h4>
+    <p>The widest console — fees, students, academic tracker, staff, transport,
+    inventory, communication, admissions, complaints, donors, automation.
+    Default landing: <em>Dashboard</em>.</p>
+    <div class="tags">
+      <span class="tag">Dashboard</span><span class="tag">Money</span>
+      <span class="tag">Fees &amp; UPI</span><span class="tag">Students</span>
+      <span class="tag">Academic</span><span class="tag">Staff</span>
+      <span class="tag">Transport</span><span class="tag">Inventory</span>
+      <span class="tag">Communication</span><span class="tag">Admissions</span>
+      <span class="tag">Complaints</span><span class="tag">Automation</span>
+    </div>
+  </div>
+  <div class="card">
+    <h4>Teacher · Classroom focus</h4>
+    <p>Trimmed nav: Today, Class tracker, My students, Messages, Complaints.
+    Built for the four-or-five things a teacher actually does in a day.</p>
+    <div class="tags">
+      <span class="tag">Today</span><span class="tag">Class tracker</span>
+      <span class="tag">My students</span><span class="tag">Messages</span>
+      <span class="tag">Complaints</span>
+    </div>
+  </div>
+  <div class="card">
+    <h4>Parent · Read-mostly portal</h4>
+    <p>Their child(ren) only — Home, Academics, Fees, Transport, Messages,
+    Raise ticket. Search bar copy adapts and the live pulse-dot is hidden
+    for the parent role.</p>
+    <div class="tags">
+      <span class="tag">Home</span><span class="tag">Academics</span>
+      <span class="tag">Fees</span><span class="tag">Transport</span>
+      <span class="tag">Messages</span><span class="tag">Raise ticket</span>
+    </div>
+  </div>
+</div>
+</section>
+
+<hr/>
+
+<!-- SCREENS -->
+<section>
+<h2>The eighteen screens</h2>
+<p class="lede">Every screen, what it does, what it persists.</p>
+
+<table>
+  <thead>
+    <tr><th>Screen</th><th>Role(s)</th><th>What it does</th><th>Writes to</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>Trust overview</strong></td><td>Super</td><td>Multi-school KPI roll-up, anomaly feed, donation pipeline, compliance, AI briefing card.</td><td><em>read-only</em></td></tr>
+    <tr><td><strong>Schools</strong></td><td>Super</td><td>Per-school cards with student / fees / wellness; drill-down detail panel.</td><td><em>read-only</em></td></tr>
+    <tr><td><strong>Money Control</strong></td><td>Principal</td><td>4 live KPIs (income / expense / surplus / pending), income-vs-expense chart, ledger of every receipt &amp; payment.</td><td>derived</td></tr>
+    <tr><td><strong>Fees &amp; UPI</strong></td><td>Principal · Parent</td><td>3-step UPI flow (pick → QR → mark paid → receipt). CSV export, bulk WhatsApp/SMS reminders, per-row Receipt view.</td><td><code>recent_fees</code> · <code>pending_fees</code> · <code>activities</code> · <code>audit_log</code></td></tr>
+    <tr><td><strong>Dashboard</strong></td><td>Principal</td><td>Live KPIs derived from real data, briefing card, transport boarding strip, fee tables, activity feed.</td><td>derived</td></tr>
+    <tr><td><strong>Students</strong></td><td>Principal · Teacher</td><td>Roster with class filter, bulk-select messaging, New admission modal (Indian phone validation), CSV import, View profile, Withdraw / Restore.</td><td><code>students</code> · <code>pending_fees</code> · <code>audit_log</code></td></tr>
+    <tr><td><strong>Academic tracker</strong></td><td>Principal · Teacher</td><td>Class → Section → Student picker, 4 KPIs, Today's daily log (upsert), 28-day attendance heatmap, week-of picker, Monthly report CSV.</td><td><code>daily_logs</code> · <code>audit_log</code></td></tr>
+    <tr><td><strong>Staff</strong></td><td>Principal</td><td>Performance leaderboard, today's attendance ring, intern rotations, alerts.</td><td><em>read-only</em></td></tr>
+    <tr><td><strong>Transport</strong></td><td>Principal · Parent</td><td>Routes list, stop-by-stop boarding timeline, Mark boarded / absent per stop, absentee table.</td><td><code>routes</code> (JSONB stops) · <code>audit_log</code></td></tr>
+    <tr><td><strong>Inventory</strong></td><td>Principal</td><td>Per-class stock register, low-stock flags, reorder.</td><td><em>read-only</em></td></tr>
+    <tr><td><strong>Communication</strong></td><td>Principal · Teacher · Parent</td><td>Recent broadcasts, templates, compose pane.</td><td><em>read-only</em></td></tr>
+    <tr><td><strong>Admissions</strong></td><td>Principal</td><td>Kanban: New → Contacted → Converted / Rejected. Per-card advance, WhatsApp/Phone deep links.</td><td><code>enquiries</code> · <code>audit_log</code></td></tr>
+    <tr><td><strong>Complaints</strong></td><td>Principal · Teacher · Parent</td><td>Status state machine (Open → In Progress → Resolved), per-row filter.</td><td><code>complaints</code> · <code>audit_log</code></td></tr>
+    <tr><td><strong>Donors</strong></td><td>Super · Principal</td><td>Donor directory, active campaigns with progress bars, top contributors YTD.</td><td><em>read-only</em></td></tr>
+    <tr><td><strong>Automation</strong></td><td>Principal</td><td>Event-based rules list, live event stream from the activities table.</td><td><em>read-only</em></td></tr>
+    <tr><td><strong>Users &amp; Roles</strong></td><td>Super</td><td>User directory, per-role count + permission description card.</td><td><em>read-only</em></td></tr>
+    <tr><td><strong>Audit log</strong></td><td>Super</td><td>Every server-side mutation appears here, color-coded by action type.</td><td>append-only</td></tr>
+    <tr><td><strong>Settings</strong></td><td>Super</td><td>Trust identity, finance, communication, security configuration.</td><td><em>config</em></td></tr>
+  </tbody>
+</table>
+</section>
+
+<hr/>
+
+<!-- FEATURES IN DETAIL -->
+<section>
+<h2>Features in detail</h2>
+<p class="lede">Every screen, every interactive element, every workflow.</p>
+
+<h3>Cross-cutting features (work on every screen)</h3>
+<div class="screen">
+  <div class="screen-purpose">These are wired into the application shell, so they're available regardless of which screen you're on.</div>
+  <ul>
+    <li><strong>Sidebar navigation</strong> — role-based menu. The list of items changes when you switch role; sections are grouped (Trust, People, Operations, CRM, System). Click any item to switch screens; the active row gets an amber left-border + soft fill.</li>
+    <li><strong>Sidebar collapse / expand</strong> — toggle via the menu button in the topbar or the Tweaks panel. Collapsed mode shows icons only (58 px wide).</li>
+    <li><strong>Topbar search</strong> — placeholder copy adapts to the current role ("Search students, fees, staff, routes…" for Principal vs "Search fees, messages, transport…" for Parent). Keyboard shortcut hint: <code>⌘F</code>.</li>
+    <li><strong>Live pulse-dot</strong> — green pill in the topbar that pulses to indicate the system is in real-time mode. Hidden when role is Parent.</li>
+    <li><strong>Theme toggle</strong> — sun / moon icon in the topbar flips the entire colour palette (light cream ↔ deep ink), persists to <code>localStorage</code>.</li>
+    <li><strong>Notifications icon</strong> — small dot indicator; opens a notification tray (placeholder).</li>
+    <li><strong>Tweaks panel</strong> (<code>⌘K</code>) — slide-in side panel with Role, View (Desktop/Mobile), Theme, Density (compact/balanced/spacious), Sidebar (expanded/icons), Accent colour swatches.</li>
+    <li><strong>Role pill</strong> — floating dark pill at the bottom-centre that swaps roles instantly (Super Admin / Principal / Teacher / Parent). Triggers a re-render of the sidebar + landing screen.</li>
+    <li><strong>Desktop / Mobile view toggle</strong> — bottom-right floating pill that wraps the whole app in an iPhone frame (390 × 844) for mobile-responsive previewing.</li>
+    <li><strong>Toast notifications</strong> — top-centre rounded pill (green = ok, red = bad, amber = warn) that confirms every mutation: "Admitted Aakash Kummar · STN-9164", "Withdrew Aakash · history preserved", "5 reminders queued", etc. Auto-dismisses after 2.4 seconds.</li>
+  </ul>
+</div>
+
+<h3>Per-screen features</h3>
+
+<div class="screen">
+  <div class="screen-head"><span class="num">01</span><h3>Trust overview</h3><span class="roles">Super Admin</span></div>
+  <p class="screen-purpose">Top-of-funnel view across every school in the trust — the morning briefing screen.</p>
+  <ul>
+    <li><strong>Greeting block</strong> — date eyebrow + serif headline + subhead summarising last sync time.</li>
+    <li><strong>Time range segmented control</strong> — This week / This term / YTD (display state).</li>
+    <li><strong>Board pack export</strong> button (header).</li>
+    <li><strong>Four KPI cards</strong> — Students (count), Fee collection (%), Donations YTD (₹), Parent NPS (score). Each with a coloured puck icon, delta chip, and sub-line.</li>
+    <li><strong>Schools roll-up card</strong> — one row per school with avatar, city, student count, fee %, wellness %; dual-progress bar (green = collected, red = pending); status chip; chevron-right hint that the row is clickable to drill in.</li>
+    <li><strong>AI briefing card</strong> — dark green gradient panel with three numbered insight rows; "Start call list" + "Dismiss" actions.</li>
+    <li><strong>Anomalies card</strong> — list of unusual patterns this week with tone-coloured icons (warn / bad / info) and a count chip in the header.</li>
+    <li><strong>Donation pipeline card</strong> — funnel by stage (Lead / In talks / Committed / Received) with per-stage bar widths proportional to ₹ in motion.</li>
+    <li><strong>Compliance card</strong> — Q1/FY26 items with progress vs goal (e.g. "Teacher verification 96/100"), bars colour-coded by tone.</li>
+  </ul>
+  <div class="persists">Reads only — no mutations from this screen.</div>
+</div>
+
+<div class="screen">
+  <div class="screen-head"><span class="num">02</span><h3>Schools</h3><span class="roles">Super Admin</span></div>
+  <p class="screen-purpose">Trust-wide school directory and per-school deep dive.</p>
+  <ul>
+    <li><strong>School cards grid</strong> — one card per school with avatar puck, name (serif), city, stat tiles (Students / Fees % / Wellness), dual-progress bar. Click a card to set it as the detail target — the card border turns amber.</li>
+    <li><strong>Detail panel</strong> below the grid — eight stat tiles for the selected school: Students, Teachers, Fees collected, Complaints open, Transport routes, Inventory low, Donors, Audit score.</li>
+    <li><strong>Edit + Open as Principal</strong> buttons in the detail card head.</li>
+    <li><strong>Add school</strong> + <strong>Export</strong> buttons in the page header.</li>
+  </ul>
+  <div class="persists">Reads only — empty state shows a "No schools added to the trust yet" card.</div>
+</div>
+
+<div class="screen">
+  <div class="screen-head"><span class="num">03</span><h3>Money Control</h3><span class="roles">Principal · Super Admin</span></div>
+  <p class="screen-purpose">Real-time financial picture — fees in, expenses out, what's pending.</p>
+  <ul>
+    <li><strong>Four live KPIs</strong> computed from real Supabase data:
+      <ul>
+        <li><strong>Total income · YTD</strong> = sum of <code>recent_fees.amount</code></li>
+        <li><strong>Total expense · YTD</strong> = ₹0 ("not tracked yet" — explicit honesty rather than fake)</li>
+        <li><strong>Net surplus</strong> = income − expense, with margin %</li>
+        <li><strong>Pending receivables</strong> = sum of <code>pending_fees.amount</code> + count of students</li>
+      </ul>
+    </li>
+    <li><strong>Combined / School only / Trust only</strong> segmented filter.</li>
+    <li><strong>Income vs Expense</strong> chart (12-week area + bar) — empty-state placeholder when no series exists.</li>
+    <li><strong>Income breakup card</strong> — four bars (Fees received, Fees pending, Donations, Other income) with width proportional to share, ₹K + percent display.</li>
+    <li><strong>Ledger table</strong> — every <code>recent_fee</code> rendered as a transaction row with TXN id, date, description, account chip (School / Trust), category, method, ± amount (green income / red expense), Receipt button.</li>
+    <li><strong>Filter tabs</strong> — All / Income / Expense.</li>
+    <li><strong>Export ledger</strong> button.</li>
+  </ul>
+  <div class="persists">Derived view — no direct writes. Reflects every <code>POST /api/fees/pay</code> in real time.</div>
+</div>
+
+<div class="screen">
+  <div class="screen-head"><span class="num">04</span><h3>Fees &amp; UPI</h3><span class="roles">Principal · Parent</span></div>
+  <p class="screen-purpose">The most-used screen. End-to-end fee collection, from picking a student to issuing a printable receipt.</p>
+  <ul>
+    <li><strong>Live total chips</strong> — ₹X collected (green), ₹Y pending (warn), ₹Z overdue (red), all computed from current data.</li>
+    <li><strong>Header buttons:</strong>
+      <ul>
+        <li><strong>Import structure</strong> — opens an OS file picker (.csv / .xlsx); on selection, toast confirms file name + size.</li>
+        <li><strong>Export CSV</strong> — builds a CSV from the current data and triggers a Blob download (filename includes ISO date).</li>
+        <li><strong>Collect fee · N pending</strong> — opens a quick-collect dropdown listing every pending student (avatar, name, class, ID, due date, amount in red if overdue). Click one to load it into the right panel.</li>
+      </ul>
+    </li>
+    <li><strong>Status segmented filter</strong> — All · N / Paid · N / Pending · N / Overdue · N. Counts are live.</li>
+    <li><strong>Class filter button</strong> — opens a dropdown menu of classes 1–8.</li>
+    <li><strong>Bulk select checkboxes</strong> — header checkbox selects all unpaid in the current view; per-row checkboxes for individual selection (paid rows disabled). When ≥1 row is selected, an amber bar appears with <strong>Remind on WhatsApp</strong> / <strong>Remind via SMS</strong> buttons that POST to <code>/api/fees/remind</code> — composite activity-feed entry plus one audit row per recipient.</li>
+    <li><strong>Per-row Collect button</strong> (pending rows) — loads that student into the right panel.</li>
+    <li><strong>Per-row Receipt button</strong> (paid rows) — jumps the right panel to Step 3 with that fee selected.</li>
+    <li><strong>Right panel: 3-step UPI flow</strong>
+      <ul>
+        <li><strong>Step 1 (Pick)</strong> — student card with avatar, name, ID, parent phone, line items (Term fee, Activity fee, Discount, Late fee), Payable total in serif font. Method selector (UPI / Cash / Bank). <strong>Proceed</strong> button.</li>
+        <li><strong>Step 2 (QR)</strong> — fake but scannable-looking QR (deterministic SVG pattern), UPI handle "stansford@hdfc", "Listening for payment…" pulse pill. Buttons: <strong>Back</strong> (return to Step 1) and <strong>Mark paid</strong> (calls <code>POST /api/fees/pay</code>).</li>
+        <li><strong>Step 3 (Receipt)</strong> — printable monospace receipt with header "STANSFORD INTERNATIONAL HR.SEC.SCHOOL", student details, line items, PAID stamp. Four share buttons (WhatsApp / SMS / PDF / Email) — see below. <strong>Done · collect another</strong> button auto-advances to the next pending student.</li>
+      </ul>
+    </li>
+    <li><strong>Stage indicator dots</strong> at the top of the panel are clickable shortcuts when valid.</li>
+    <li><strong>Receipt share actions</strong>:
+      <ul>
+        <li><strong>WhatsApp</strong> opens <code>wa.me/&lt;parent-phone&gt;</code> with prefilled receipt text.</li>
+        <li><strong>SMS</strong> opens <code>sms:</code> link.</li>
+        <li><strong>PDF</strong> calls <code>window.print()</code> — uses the browser's save-as-PDF.</li>
+        <li><strong>Email</strong> opens <code>mailto:</code> with subject + body prefilled.</li>
+      </ul>
+    </li>
+  </ul>
+  <div class="persists">Writes to <code>recent_fees</code>, <code>pending_fees</code>, <code>activities</code>, <code>audit_log</code>, and the matching <code>students.fee</code> field.</div>
+</div>
+
+<div class="screen">
+  <div class="screen-head"><span class="num">05</span><h3>Dashboard</h3><span class="roles">Principal</span></div>
+  <p class="screen-purpose">The principal's morning view — operational pulse of the school.</p>
+  <ul>
+    <li><strong>Personalised greeting</strong> — date eyebrow + "Good morning. N students on roll today" headline. Date + greeting computed in <code>useEffect</code> after mount to avoid SSR hydration mismatch.</li>
+    <li><strong>Time-range segmented control</strong> — Today / 1W / 4W / 12W / YTD.</li>
+    <li><strong>Export + Quick add</strong> header buttons.</li>
+    <li><strong>Four KPIs computed from real data</strong>: Students count, Fees collected (with "X still pending" subtitle), Attendance, Buses.</li>
+    <li><strong>Money chart card</strong> — Income vs Expense weekly chart + 3 stat tiles (Income YTD / Expense YTD / Net surplus) + Open ledger button.</li>
+    <li><strong>Briefing card</strong> — dark gradient AI-style panel with today's focus.</li>
+    <li><strong>Transport live boarding</strong> — per-route progress bars with live pulse pill.</li>
+    <li><strong>Fees by class</strong> bar chart — paid/pending stack per class.</li>
+    <li><strong>Today rings</strong> — 4 metric rings (attendance, homework, fees, staff).</li>
+    <li><strong>Recent fees</strong> table with "View all" shortcut.</li>
+    <li><strong>Pending fees</strong> table with "Remind all" shortcut and dynamic subtitle.</li>
+    <li><strong>Activity feed</strong> — last 7 events with tone-coloured icons.</li>
+  </ul>
+  <div class="persists">Derived view — every section reflects the live database.</div>
+</div>
+
+<div class="screen">
+  <div class="screen-head"><span class="num">06</span><h3>Students</h3><span class="roles">Principal · Teacher</span></div>
+  <p class="screen-purpose">Master roster with admissions, bulk actions, profile drill-down, and soft-delete.</p>
+  <ul>
+    <li><strong>Four KPIs</strong>: Enrolled count, New admissions, Average attendance (computed from roster), Transfer certificates.</li>
+    <li><strong>Header buttons</strong>:
+      <ul>
+        <li><strong>Import</strong> — opens a drop-zone modal with file picker; downloadable sample CSV template; on submit, FileReader streams CSV to <code>POST /api/students/import</code>; one pending fee per imported row.</li>
+        <li><strong>Export</strong> — downloads a CSV of the current filter view (filename includes class).</li>
+        <li><strong>New admission</strong> — opens an admission modal (see below).</li>
+      </ul>
+    </li>
+    <li><strong>Active / Archived view toggle</strong> — segmented control showing live counts, e.g. "Active · 7 / Archived · 2".</li>
+    <li><strong>Class filter tabs</strong> (All / Class 1–8) + filter dropdown for parity with Fees.</li>
+    <li><strong>Bulk select checkboxes</strong> — header check-all + per-row. When ≥1 selected, contextual amber bar with <strong>Message parents (WhatsApp)</strong> + <strong>SMS parents</strong>.</li>
+    <li><strong>Per-row data</strong>: avatar, name (with green "new" chip if added this session), ID, class chip, parent phone (mono), attendance bar, fee status chip, transport, joined date.</li>
+    <li><strong>Per-row "..." menu</strong> (positioned <code>fixed</code> to escape table clipping):
+      <ul>
+        <li><strong>View profile</strong> — opens a full-screen ProfileModal (see below).</li>
+        <li><strong>Message parent</strong> — wa.me deep link, disabled for archived students.</li>
+        <li><strong>Issue TC</strong> — toasts "TC requested · queued".</li>
+        <li><strong>Withdraw…</strong> (active rows) — opens a confirmation dialog. <strong>Restore admission</strong> (archived rows) — POSTs to <code>/api/students/restore</code>.</li>
+      </ul>
+    </li>
+    <li><strong>New admission modal</strong>:
+      <ul>
+        <li>Student full name (required, with inline error)</li>
+        <li>Class dropdown (1–8) + Section (A / B)</li>
+        <li>Parent mobile — fixed <code>+91</code> prefix label + 10-digit-capped numeric input + live <code>N/10</code> counter; inline error if not 10 digits or doesn't start with 6/7/8/9; green "Saved as +91 XXXXX XXXXX" preview on valid input</li>
+        <li>Transport route (No transport / R1 / R2 / R3)</li>
+        <li>Submit button disabled until form is valid</li>
+        <li>Server validates the same rule and rejects 400 with a clear message if mismatched</li>
+      </ul>
+    </li>
+    <li><strong>Withdraw confirmation modal</strong>:
+      <ul>
+        <li>Explicit list of what's preserved forever (paid receipts, daily logs, audit log entries) vs. what gets cancelled (uncollected pending fee for this term).</li>
+        <li>Cancel + red "Withdraw student" button; mentions "You can restore them any time from the Archived tab".</li>
+        <li>Esc-to-cancel + backdrop click to close.</li>
+      </ul>
+    </li>
+    <li><strong>Profile modal</strong>:
+      <ul>
+        <li>Header strip — large avatar puck, serif name, ID, class, joined date, "new admission" chip if added this session.</li>
+        <li>Four colour-coded stat tiles — Attendance, Fee status, Transport, Section.</li>
+        <li>Parent contact card — formatted phone + 3 deep-link buttons (Call / WhatsApp / SMS).</li>
+        <li>28-day attendance heatmap — derived deterministically from the student ID so the same student always shows the same pattern.</li>
+        <li>Recent activity timeline — synthesised from what's known (fee status, attendance, transport route, joined date).</li>
+        <li>Footer: Issue TC + Message parent + Close. Esc + backdrop close.</li>
+      </ul>
+    </li>
+  </ul>
+  <div class="persists">Writes to <code>students</code>, <code>pending_fees</code>, <code>audit_log</code>. Soft-delete preserves <code>recent_fees</code> + <code>daily_logs</code> + audit history forever.</div>
+</div>
+
+<div class="screen">
+  <div class="screen-head"><span class="num">07</span><h3>Academic tracker</h3><span class="roles">Principal · Teacher</span></div>
+  <p class="screen-purpose">Class → Student → Daily log drill-down. Teachers post one log per student per day; monthly report rolls them up.</p>
+  <ul>
+    <li><strong>Header buttons</strong>:
+      <ul>
+        <li><strong>Week of …</strong> — dropdown of the last 8 week-start dates (Mondays, computed relative to today after mount). Selection updates the roster card subtitle and shows a toast.</li>
+        <li><strong>Monthly report</strong> — builds a CSV of the current class roster (per-student attendance / homework / classwork / handwriting / behaviour / has-log) plus a summary block at the bottom (averages, logs-posted count). Filename: <code>academic-class-N-X-april-2026.csv</code>.</li>
+        <li><strong>Log today</strong> — opens the log modal.</li>
+      </ul>
+    </li>
+    <li><strong>Class picker</strong> — buttons for Class 1–8, active one filled with ink.</li>
+    <li><strong>Section toggle</strong> — A / B with amber-soft fill for the active one.</li>
+    <li><strong>Class roster card</strong> (left, scrollable) — per-row roll number, avatar, name (with green "logged" chip if a log exists for today), ID, attendance % (red if &lt;85%). Click to select.</li>
+    <li><strong>Student detail strip</strong> (right) — large avatar, name, ID, class, roll, parent contact, action buttons (Parent WhatsApp / TC / Today's log).</li>
+    <li><strong>Four KPIs</strong> for the selected student — Attendance, Homework, Classwork, Handwriting.</li>
+    <li><strong>Today's daily log card</strong> — six rows (Classwork, Homework, Topics covered, Handwriting, Behaviour, Extra-curricular) each with text + status chip. Header chip flips between green "Submitted · posted by &lt;teacher&gt; HH:MM" and amber "Empty" depending on whether a log exists.</li>
+    <li><strong>28-day attendance heatmap</strong> — deterministic per student ID; weekend cells muted; absent cells red.</li>
+    <li><strong>Log today modal</strong> — six fields (Classwork / Homework / Topics / Handwriting note + grade dropdown / Behaviour / Extra-curricular). Pre-fills from any existing log so the same modal handles both create and edit.</li>
+    <li><strong>POST <code>/api/academic/log</code></strong> — upserts on the composite key <code>(student_id, date)</code>; audits "Posted" or "Updated".</li>
+  </ul>
+  <div class="persists">Writes to <code>daily_logs</code> (composite-key upsert) and <code>audit_log</code>.</div>
+</div>
+
+<div class="screen">
+  <div class="screen-head"><span class="num">08</span><h3>Staff</h3><span class="roles">Principal</span></div>
+  <p class="screen-purpose">Performance leaderboard, today's roll-call, intern rotations.</p>
+  <ul>
+    <li><strong>Four KPIs</strong>: Total staff, Interns, Average performance score, Low performers count.</li>
+    <li><strong>Performance leaderboard</strong> — sortable table with rank #, avatar, name, dept, role, attendance bar (warn if &lt;85%), tasks bar, composite score, status chip (Top performer / On track / Needs review).</li>
+    <li><strong>Today's attendance</strong> — ring chart with check-in counts (on time / late / on leave / absent).</li>
+    <li><strong>Intern rotations</strong> — per-intern progress bar (weeks completed / total).</li>
+    <li><strong>Alerts card</strong> — flagged staff (low attendance), expiring contracts, scheduled salary runs.</li>
+    <li><strong>Header buttons</strong>: Monthly report, Add staff.</li>
+  </ul>
+  <div class="persists">Reads only — Add staff button non-functional in v1.</div>
+</div>
+
+<div class="screen">
+  <div class="screen-head"><span class="num">09</span><h3>Transport</h3><span class="roles">Principal · Parent</span></div>
+  <p class="screen-purpose">Live morning bus run with stop-by-stop boarding and absentee tracking.</p>
+  <ul>
+    <li><strong>Live GPS pill</strong> with pulse + bus count.</li>
+    <li><strong>Four KPIs</strong>: Students boarded / total, Absent today, Buses running (with delayed count), Avg on-time %.</li>
+    <li><strong>Routes list</strong> (left) — per-route avatar puck, code, status chip (Running / Delayed), name, driver, ETA, boarded/cap progress bar. Click to select; active row gets amber-soft background + 3 px left border.</li>
+    <li><strong>Route detail strip</strong> (right) — large bus icon, route code + name, status chip, bus number, driver, ETA, action buttons (Call / Track / Broadcast).</li>
+    <li><strong>Stops timeline</strong> — vertical list with timeline rail; per-stop circle (green check = done, amber pulsing = current, hollow = pending), name + chip, time + cap, boarded count chip + absent count chip; the current stop has <strong>Board one</strong> + <strong>Mark absent</strong> buttons that POST to <code>/api/transport/board</code>.</li>
+    <li><strong>Smart capacity logic</strong> — if a current stop is already at cap, "Mark absent" converts one boarded → absent rather than failing silently.</li>
+    <li><strong>Absentee table</strong> — student, class, stop, route, "WhatsApp · time" notification chip; <strong>Re-notify</strong> action.</li>
+  </ul>
+  <div class="persists">Writes to <code>routes.stops</code> (JSONB) and <code>audit_log</code> (driver name + action + stop).</div>
+</div>
+
+<div class="screen">
+  <div class="screen-head"><span class="num">10</span><h3>Inventory</h3><span class="roles">Principal</span></div>
+  <p class="screen-purpose">Books, uniforms, assets — class-tagged stock register with low-stock alerts.</p>
+  <ul>
+    <li><strong>Four KPIs</strong>: SKUs tracked, Low stock items, Stock value, Suppliers.</li>
+    <li><strong>Stock register table</strong> — item icon (book / uniform / box) + name, category chip, class, on-hand (red if low), min, issued, health bar + status chip (OK / Low), action button (Reorder for low / Issue for ok).</li>
+    <li><strong>Filter segmented</strong> — All / Books / Uniforms / Assets / Low.</li>
+    <li><strong>Class-wise stock health</strong> — per-class progress bar (red &lt;70%, amber &lt;85%, green ≥85%).</li>
+    <li><strong>Recent stock movements</strong> — list of IN/OUT entries with quantity, source/destination, time-ago.</li>
+    <li><strong>Header buttons</strong>: Stock in, Stock out, Add item.</li>
+  </ul>
+  <div class="persists">Reads only in v1.</div>
+</div>
+
+<div class="screen">
+  <div class="screen-head"><span class="num">11</span><h3>Communication</h3><span class="roles">Principal · Teacher · Parent</span></div>
+  <p class="screen-purpose">SMS / WhatsApp broadcasts, templates, and a compose pane.</p>
+  <ul>
+    <li><strong>Four KPIs</strong>: Messages today, Delivery rate, Templates count, Parent reachability.</li>
+    <li><strong>Recent broadcasts table</strong> — campaign name, channel chips (WA / SMS), audience count, sent / delivered, time-ago.</li>
+    <li><strong>Templates list</strong> — per-template icon, name, description, channel tags.</li>
+    <li><strong>Compose pane</strong> — Audience selector (All parents / Pending fees only / Pick a class), Channel segmented (WhatsApp / SMS / Both), Message textarea, <strong>Send</strong> button.</li>
+  </ul>
+  <div class="persists">Reads only in v1; sending is a future hook (MSG91 / Twilio).</div>
+</div>
+
+<div class="screen">
+  <div class="screen-head"><span class="num">12</span><h3>Admissions (Enquiries)</h3><span class="roles">Principal</span></div>
+  <p class="screen-purpose">Kanban admissions funnel from first enquiry to confirmed admission.</p>
+  <ul>
+    <li><strong>Four KPIs</strong>: Open pipeline, Converted, Rejected, Total enquiries.</li>
+    <li><strong>Four Kanban columns</strong> — New / Contacted / Converted / Rejected — each with a header chip (status colour), description, and live count.</li>
+    <li><strong>Per-card detail</strong> — avatar, name, ID, class, source, parent name + phone (mono).</li>
+    <li><strong>Per-card actions</strong> — phone-icon button (tel: link), WhatsApp-icon button (wa.me link), and a contextual advance button: <strong>Contact</strong> on New cards (→ Contacted) and <strong>Convert</strong> on Contacted cards (→ Converted).</li>
+    <li><strong>Header buttons</strong>: Export, New enquiry.</li>
+  </ul>
+  <div class="persists">Writes to <code>enquiries.status</code> via PATCH; new enquiries via POST. Audits every transition.</div>
+</div>
+
+<div class="screen">
+  <div class="screen-head"><span class="num">13</span><h3>Complaints</h3><span class="roles">Principal · Teacher · Parent</span></div>
+  <p class="screen-purpose">Parent complaints with a strict status state machine.</p>
+  <ul>
+    <li><strong>Four KPIs</strong>: Open count, In progress count, Resolved count, Parent CSAT (placeholder).</li>
+    <li><strong>Status filter segmented</strong> — All / Open / In Progress / Resolved.</li>
+    <li><strong>Complaint queue table</strong> — ID (mono), Student + class + parent, Issue text (truncates at 420 px), Assigned desk, Date, Status chip, action buttons.</li>
+    <li><strong>Status state machine</strong> — Open rows show <strong>Start</strong> button (→ In Progress); In Progress rows show <strong>Resolve</strong> button (→ Resolved); Resolved rows show only the more menu.</li>
+    <li><strong>Header buttons</strong>: Export, Log complaint.</li>
+  </ul>
+  <div class="persists">Writes to <code>complaints.status</code> via PATCH; every transition appended to <code>audit_log</code>.</div>
+</div>
+
+<div class="screen">
+  <div class="screen-head"><span class="num">14</span><h3>Donors</h3><span class="roles">Super Admin · Principal</span></div>
+  <p class="screen-purpose">Donor CRM, campaign tracker, 80G receipts.</p>
+  <ul>
+    <li><strong>Four KPIs</strong>: Donors count, Raised YTD (₹K computed), CSR partners count, Recurring donors.</li>
+    <li><strong>Donor directory table</strong> — avatar + name, ID (mono), Type chip (CSR / Trust / Individual / Alumni), Contributed YTD (₹), Last gift date, Next touchpoint, action buttons (mail / download).</li>
+    <li><strong>Type filter segmented</strong> — All / CSR / Trusts / Individuals / Alumni.</li>
+    <li><strong>Active campaigns card</strong> — per-campaign progress bar with raised / target ₹K, donor count, percent label.</li>
+    <li><strong>Top contributors YTD</strong> — ranked list (top 5).</li>
+  </ul>
+  <div class="persists">Reads only in v1.</div>
+</div>
+
+<div class="screen">
+  <div class="screen-head"><span class="num">15</span><h3>Automation</h3><span class="roles">Principal</span></div>
+  <p class="screen-purpose">Event-based rule engine — when an event fires, an action runs.</p>
+  <ul>
+    <li><strong>Four KPIs</strong>: Active rules, Actions today, Manual hours saved, Success rate.</li>
+    <li><strong>Rules list</strong> — per-rule icon, name (e.g. "Fee paid → Receipt + WhatsApp"), runs counter, last-fired timestamp, Live chip, toggle switch (visual).</li>
+    <li><strong>Live event stream</strong> — sourced from the <code>activities</code> table; per-row time, event type (mono accent), description, tone dot.</li>
+  </ul>
+  <div class="persists">Reads only in v1; rule engine itself is a future hook.</div>
+</div>
+
+<div class="screen">
+  <div class="screen-head"><span class="num">16</span><h3>Users &amp; Roles</h3><span class="roles">Super Admin</span></div>
+  <p class="screen-purpose">Per-role access governance.</p>
+  <ul>
+    <li><strong>Admin &amp; staff table</strong> — User (avatar + name + email), Role chip, School, MFA status (green "On" or amber "Off"), Last active. Search box in card head.</li>
+    <li><strong>Roles card</strong> — list of all 7 roles (Super Admin, Principal, Academic Director, Accountant, Teacher, Transport lead, Parent) with current count + permission description.</li>
+    <li><strong>Header buttons</strong>: Export CSV, Invite user.</li>
+  </ul>
+  <div class="persists">Reads only in v1; auth integration is the v2 priority.</div>
+</div>
+
+<div class="screen">
+  <div class="screen-head"><span class="num">17</span><h3>Audit log</h3><span class="roles">Super Admin</span></div>
+  <p class="screen-purpose">Immutable trail of every server-side action.</p>
+  <ul>
+    <li><strong>Four computed KPIs</strong> — Events total, Financial writes (matches "paid"/"receipt"/"reminder"/"donation"), Permission changes (matches "role"/"user"), Failed attempts.</li>
+    <li><strong>Streaming chip</strong> in the card head (teal pulse).</li>
+    <li><strong>Activity list</strong> — per-row time (mono), avatar, action title, who + meta sub-line, tone chip. The tone is computed via <code>toneFor(action)</code>:
+      <ul>
+        <li><strong>ok</strong> — paid, receipt, board, resolved, converted</li>
+        <li><strong>bad</strong> — absent, complaint</li>
+        <li><strong>warn</strong> — progress, contacted, late</li>
+        <li><strong>info</strong> — created, enquiry, viewed</li>
+        <li><strong>accent</strong> — anything else</li>
+      </ul>
+    </li>
+    <li><strong>Filter dropdown</strong>: All events / Financial / Permissions / Automations.</li>
+    <li><strong>Export</strong> button.</li>
+  </ul>
+  <div class="persists">Append-only — never edited or deleted. Receives one row per mutation across every API route.</div>
+</div>
+
+<div class="screen">
+  <div class="screen-head"><span class="num">18</span><h3>Settings</h3><span class="roles">Super Admin</span></div>
+  <p class="screen-purpose">Trust-wide configuration. Per-school overrides land in school-level settings.</p>
+  <ul>
+    <li><strong>Four config sections</strong>:
+      <ul>
+        <li><strong>Trust identity</strong> — Trust name, Registration no., PAN/80G status, Primary contact</li>
+        <li><strong>Finance</strong> — Academic year, Fee cycle, UPI handle, GST/PAN for invoices</li>
+        <li><strong>Communication</strong> — SMS provider, WhatsApp Business API, Email sender, Office hours</li>
+        <li><strong>Security</strong> — MFA requirement, Session timeout, IP allowlist, Backup retention</li>
+      </ul>
+    </li>
+    <li>Per-section <strong>Edit</strong> shortcut.</li>
+    <li><strong>Header buttons</strong>: Revert, Save changes.</li>
+  </ul>
+  <div class="persists">Configuration only — values displayed as "—" / "Not configured" until set.</div>
+</div>
+
+</section>
+
+<!-- FOOTER -->
+<footer class="foot">
+  <div>
+    Project Report · <strong>Vidyalaya360 / Stansford International HR.Sec.School</strong><br/>
+    Generated on build of commit <code>33f07c5</code>.
+  </div>
+  <div style="text-align: right;">
+    Repository: <a href="https://github.com/aakashkummar-workspace/Stansford_crm">github.com/aakashkummar-workspace/Stansford_crm</a><br/>
+    Built with Next.js 14 · React 18 · Supabase Postgres
+  </div>
+</footer>
+
+</div>
+</body>
+</html>
