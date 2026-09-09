@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../Icon";
-import { KPI } from "../ui";
+import { KPI, EmptyState } from "../ui";
 
 const PRIORITIES = [
   { k: "low",     label: "Low",     tone: "" },
@@ -39,7 +39,7 @@ function ModalShell({ title, sub, onClose, children, width = 520 }) {
   }, [onClose]);
   return (
     <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: width, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
@@ -72,12 +72,21 @@ function ResponseChip({ response }) {
   return <span className="chip"><span className="dot" />Awaiting</span>;
 }
 
-export default function ScreenTasks({ E, refresh, role, session }) {
+export default function ScreenTasks({ E, refresh, role, session, searchFocus, clearSearchFocus }) {
   const isAdmin = role === "admin";
   const [tasks, setTasks] = useState([]);
   const [users, setUsers] = useState([]);
   const [filter, setFilter] = useState("all"); // all | awaiting | yes | no
   const [showAdd, setShowAdd] = useState(false);
+  // Quick create (top bar / command palette) navigates here and asks the
+  // screen to open the create flow it already owns.
+  useEffect(() => {
+    if (searchFocus?.action !== "create") return;
+    setShowAdd(true);
+    clearSearchFocus?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchFocus]);
+
   const [toast, setToast] = useState(null);
   const [busyId, setBusyId] = useState(null);
   // Local drafts for assignee Yes/No + remarks before Save.
@@ -434,11 +443,20 @@ export default function ScreenTasks({ E, refresh, role, session }) {
       {isAdmin ? (
         groups.length === 0 ? (
           <div className="card">
-            <div className="empty" style={{ padding: 24 }}>
-              {tasks.length === 0
-                ? "No tasks yet. Click \"New task\" to assign work."
-                : "No matching tasks."}
-            </div>
+            {tasks.length === 0 ? (
+              <EmptyState
+                icon="check"
+                title="No tasks assigned yet"
+                body="Tasks are how work gets tracked across the team — assign one and the owner answers Yes or No with a remark."
+                action={isAdmin ? <button className="btn accent sm" onClick={() => setShowAdd(true)} disabled={users.length === 0}><Icon name="plus" size={12} />New task</button> : null}
+              />
+            ) : (
+              <EmptyState
+                icon="filter"
+                title="No tasks match this filter"
+                body="Switch to another status, or clear the filter to see everything that has been assigned."
+              />
+            )}
           </div>
         ) : (
           groups.map((g) => (
@@ -475,10 +493,14 @@ export default function ScreenTasks({ E, refresh, role, session }) {
               {taskTableHead}
               <tbody>
                 {rows.length === 0 && (
-                  <tr><td colSpan={7} className="empty">
-                    {tasks.length === 0
-                      ? "No tasks have been assigned to you yet."
-                      : "No matching tasks."}
+                  <tr><td colSpan={7} style={{ padding: 0 }}>
+                    <EmptyState
+                      icon="check"
+                      title={tasks.length === 0 ? "Nothing assigned to you" : "No tasks match this filter"}
+                      body={tasks.length === 0
+                        ? "When someone assigns you work it lands here, with the due date and a place to answer."
+                        : "Switch to another status to see the rest of your work."}
+                    />
                   </td></tr>
                 )}
                 {rows.map(({ task, n }) => renderTaskRow(task, n, { showAssignee: false }))}

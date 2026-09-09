@@ -175,7 +175,7 @@ export default function TransportEventPopup() {
       aria-live="polite"
       style={{
         position: "fixed", inset: 0,
-        background: "rgba(20,16,10,0.55)",
+        background: "var(--overlay)",
         backdropFilter: "blur(2px)",
         display: "grid", placeItems: "center",
         zIndex: 5000, padding: 20,

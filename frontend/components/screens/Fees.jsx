@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../Icon";
-import { AvatarChip, FakeQR, StatusChip, UpiQR, buildUpiUri } from "../ui";
+import { AvatarChip, FakeQR, StatusChip, UpiQR, buildUpiUri, SkeletonTable, EmptyState, SearchInput } from "../ui";
 import { money, moneyK, FEE_TYPES, feeTypeLabel, formatClassLabel } from "@/lib/format";
 import { resolveSchool, downloadPdf } from "@/lib/export";
 
@@ -1029,9 +1029,12 @@ export default function ScreenFees({ E, refresh, role, session, searchFocus, cle
 
       <div className="page-head">
         <div>
-          <div className="page-eyebrow">Finance · Fees register</div>
-          <div className="page-title">Fees & <span className="amber">Transaction</span></div>
-          <div style={{ display: "flex", gap: 10, color: "var(--ink-3)", fontSize: 12, marginTop: 12, flexWrap: "wrap" }}>
+          <div className="page-eyebrow">Finance</div>
+          <div className="page-title">Fees &amp; payments</div>
+          <div className="page-sub">
+            What has been collected, what is still owed, and how long it has been outstanding.
+          </div>
+          <div style={{ display: "flex", gap: 8, color: "var(--ink-3)", fontSize: 12, marginTop: 14, flexWrap: "wrap" }}>
             <span className="chip ok"><span className="dot" />{money(totals.collected)} collected (live)</span>
             <span className="chip warn"><span className="dot" />{money(totals.pending)} pending</span>
             <span className="chip bad"><span className="dot" />{money(totals.overdue)} overdue</span>
@@ -1737,7 +1740,7 @@ export default function ScreenFees({ E, refresh, role, session, searchFocus, cle
       )}
 
       {pendingClassPick && (
-        <div onClick={() => setPendingClassPick(null)} style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)", display: "grid", placeItems: "center", zIndex: 300, padding: 16 }}>
+        <div onClick={() => setPendingClassPick(null)} style={{ position: "fixed", inset: 0, background: "var(--overlay)", display: "grid", placeItems: "center", zIndex: 300, padding: 16 }}>
           <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 480, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
             <div className="card-head">
               <div>
@@ -1784,7 +1787,7 @@ function ConfirmModal({ title, message, confirmLabel = "Yes", cancelLabel = "No"
     return () => document.removeEventListener("keydown", onKey);
   }, [onCancel, busy]);
   return (
-    <div onClick={() => { if (!busy) onCancel(); }} style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)", display: "grid", placeItems: "center", zIndex: 300, padding: 16 }}>
+    <div onClick={() => { if (!busy) onCancel(); }} style={{ position: "fixed", inset: 0, background: "var(--overlay)", display: "grid", placeItems: "center", zIndex: 300, padding: 16 }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 400 }}>
         <div className="card-head">
           <div><div className="card-title">{title}</div></div>
@@ -1917,7 +1920,7 @@ function CollectionSummary({ recent }) {
     </div>
 
     {detail && (
-      <div onClick={() => setDetail(null)} style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)", display: "grid", placeItems: "center", zIndex: 260, padding: 16 }}>
+      <div onClick={() => setDetail(null)} style={{ position: "fixed", inset: 0, background: "var(--overlay)", display: "grid", placeItems: "center", zIndex: 260, padding: 16 }}>
         <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 640, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
           <div className="card-head">
             <div>
@@ -2105,7 +2108,7 @@ function PayOnlineModal({ order, busy, onClose, onConfirm }) {
   }, [onClose]);
   return (
     <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16,
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 460 }}>
@@ -2163,7 +2166,7 @@ function DeleteReceiptModal({ receipt, onCancel, onConfirm }) {
   const amt = Number(receipt?.amount) || 0;
   return (
     <div onClick={onCancel} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 300, padding: 16,
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 440 }}>
@@ -2232,7 +2235,7 @@ function EditFeeAmountModal({ fee, onClose, onSave }) {
   };
   return (
     <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16,
     }}>
       <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 420 }}>
@@ -2363,7 +2366,7 @@ function FeeStructureModal({ classes, onClose, onSaved }) {
   }
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)", display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto" }}>
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "var(--overlay)", display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto" }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 640, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
         <div className="card-head">
           <div>
@@ -2374,7 +2377,7 @@ function FeeStructureModal({ classes, onClose, onSaved }) {
         </div>
         <div className="card-body" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {loading ? (
-            <div style={{ padding: 20, textAlign: "center", color: "var(--ink-4)", fontSize: 12 }}>Loading…</div>
+            <SkeletonTable rows={4} cols={3} />
           ) : classNums.length === 0 ? (
             <div style={{ padding: 20, textAlign: "center", color: "var(--ink-4)", fontSize: 12 }}>No classes on the roster yet.</div>
           ) : (
@@ -2469,7 +2472,7 @@ function AddFeeItemModal({ students, onClose, onSave }) {
 
   return (
     <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
     }}>
       <form onSubmit={submit} onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 480, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
@@ -2853,7 +2856,7 @@ function ReportMenu({ onFull, onPick, onPending, onPendingClass, onClose }) {
     <div
       className="report-menu-overlay"
       onClick={onClose}
-      style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)", display: "grid", placeItems: "center", zIndex: 300, padding: 16 }}
+      style={{ position: "fixed", inset: 0, background: "var(--overlay)", display: "grid", placeItems: "center", zIndex: 300, padding: 16 }}
     >
       <div
         className="report-menu"

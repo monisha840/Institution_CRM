@@ -192,13 +192,7 @@ export default function ScreenAccessControl({ E, refresh, role, session }) {
                   if (dirty && !confirm("You have unsaved changes. Discard them?")) return;
                   setActiveRole(r);
                 }}
-                style={{
-                  padding: "6px 14px", borderRadius: 999,
-                  background: on ? "var(--accent)" : "var(--bg-2)",
-                  color: on ? "#fff" : "var(--ink-2)",
-                  border: 0, cursor: "pointer",
-                  fontSize: 12.5, fontWeight: 500,
-                }}
+                className={`seg-pill ${on ? "active" : ""}`}
               >
                 {ROLE_LABEL[r]}
               </button>

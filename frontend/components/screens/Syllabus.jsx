@@ -58,7 +58,7 @@ function ModalShell({ title, sub, onClose, children, width = 520 }) {
   }, [onClose]);
   return (
     <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: width, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>

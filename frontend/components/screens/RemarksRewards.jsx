@@ -461,7 +461,7 @@ function ResolveModal({ entry, targetLabel, busy, onClose, onSubmit }) {
 
   return (
     <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.5)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 260, padding: 16,
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 480 }}>

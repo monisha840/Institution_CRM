@@ -664,12 +664,7 @@ export default function ScreenAcademic({ E, refresh, role, session, onOpenItem }
             <button
               key={c.n}
               onClick={() => setCls(c.n)}
-              className="btn sm"
-              style={{
-                background: cls === c.n ? "var(--ink)" : "var(--card)",
-                color: cls === c.n ? "var(--bg)" : "var(--ink-2)",
-                borderColor: cls === c.n ? "var(--ink)" : "var(--rule)",
-              }}
+              className={`btn sm ${cls === c.n ? "accent" : ""}`}
             >
               {formatClassLabel(String(c.n))}
             </button>
@@ -1140,7 +1135,7 @@ function AnnounceClassModal({ cls, recipientCount, teacherName, onClose, onSent 
 
   return (
     <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16,
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 520 }}>
@@ -1241,7 +1236,7 @@ function GrowthModal({ student, onClose, onSubmit }) {
 
   return (
     <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16,
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 420 }}>
@@ -1368,7 +1363,7 @@ function LogModal({ student, cls, existing, today, classSubjects = [], onClose, 
 
   return (
     <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: hasSubjects ? 640 : 560, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>

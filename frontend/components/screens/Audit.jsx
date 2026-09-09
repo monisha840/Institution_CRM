@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Icon from "../Icon";
-import { KPI, AvatarChip } from "../ui";
+import { KPI, AvatarChip, EmptyState } from "../ui";
 import { resolveSchool, downloadPdf } from "@/lib/export";
 
 function toneFor(action = "") {
@@ -155,7 +155,11 @@ export default function ScreenAudit({ E, session }) {
         </div>
         <div>
           {events.length === 0 && (
-            <div className="empty">No events yet. Actions across the app will appear here as you work.</div>
+            <EmptyState
+              icon="audit"
+              title="No events recorded yet"
+              body="Every create, edit and delete across the workspace is logged here with who did it and when."
+            />
           )}
           {events.map((e, i) => (
             <div key={i} className="lrow">

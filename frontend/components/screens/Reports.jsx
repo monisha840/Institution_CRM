@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import Icon from "../Icon";
-import { KPI } from "../ui";
+import { KPI, EmptyState, Funnel } from "../ui";
 import { money, moneyK, formatClassLabel } from "@/lib/format";
 import { resolveSchool } from "@/lib/export";
 
@@ -467,9 +467,12 @@ export default function ScreenReports({ E, session }) {
     <div className="page">
       <div className="page-head">
         <div>
-          <div className="page-eyebrow">Governance · Reports</div>
-          <div className="page-title">Reports & <span className="amber">Financials</span></div>
-          <div className="page-sub">Monthly P&amp;L · fee collection · donations · student strength</div>
+          <div className="page-eyebrow">Insights</div>
+          <div className="page-title">Performance overview</div>
+          <div className="page-sub">
+            Profit and loss, fee collection, donations and student strength — all filtered by the
+            same date range so the numbers always agree with each other.
+          </div>
         </div>
         <div className="page-actions">
           <button className="btn accent" onClick={downloadPdf} title="Open a printable, branded PDF report">
@@ -494,42 +497,39 @@ export default function ScreenReports({ E, session }) {
 
       {/* Date range filter */}
       <div className="card" style={{ padding: "12px 14px", marginBottom: 10, display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
-        <span style={{ fontSize: 11, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 500 }}>
-          <Icon name="filter" size={11} /> Date range
+        <span className="mstrip-lbl" style={{ marginTop: 0, display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
+          <Icon name="calendar" size={12} /> Date range
         </span>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        <div className="segmented" style={{ flexWrap: "nowrap" }}>
           {DATE_PRESETS.map((p) => (
             <button
               key={p.k}
+              type="button"
+              className={preset === p.k ? "active" : ""}
               onClick={() => applyPreset(p.k)}
-              style={{
-                padding: "5px 10px", borderRadius: 999,
-                background: preset === p.k ? "var(--accent-soft)" : "var(--bg-2)",
-                color: preset === p.k ? "var(--accent-2)" : "var(--ink-2)",
-                border: preset === p.k ? "1px solid var(--accent)" : "1px solid transparent",
-                cursor: "pointer", fontSize: 11.5, fontWeight: 500,
-              }}
             >{p.label}</button>
           ))}
         </div>
-        <div style={{ display: "flex", gap: 6, alignItems: "center", marginLeft: "auto" }}>
-          <label style={{ fontSize: 11, color: "var(--ink-3)" }}>From</label>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", marginLeft: "auto", flexWrap: "wrap" }}>
+          <label className="field-hint" htmlFor="rep-from">From</label>
           <input
+            id="rep-from"
             type="date"
             className="input"
             value={fromDate}
             max={toDate || undefined}
             onChange={(e) => { setFromDate(e.target.value); setPreset("custom"); }}
-            style={{ width: 150, height: 30, padding: "0 8px", fontSize: 12 }}
+            style={{ width: 150 }}
           />
-          <label style={{ fontSize: 11, color: "var(--ink-3)" }}>To</label>
+          <label className="field-hint" htmlFor="rep-to">To</label>
           <input
+            id="rep-to"
             type="date"
             className="input"
             value={toDate}
             min={fromDate || undefined}
             onChange={(e) => { setToDate(e.target.value); setPreset("custom"); }}
-            style={{ width: 150, height: 30, padding: "0 8px", fontSize: 12 }}
+            style={{ width: 150 }}
           />
           {dateFilterActive && (
             <button
@@ -550,27 +550,26 @@ export default function ScreenReports({ E, session }) {
       </div>
 
       {/* Tab strip */}
-      <div className="card" style={{ padding: "10px 14px", marginBottom: 14, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
-        <span style={{ fontSize: 11, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 500, marginRight: 4 }}>Report:</span>
-        {[
-          { k: "pl",       label: "Monthly P&L" },
-          { k: "fees",     label: "Fee collection" },
-          { k: "donors",   label: "Donation summary" },
-          { k: "strength", label: "Student strength" },
-          { k: "teachers", label: "Teacher attendance" },
-          { k: "academic", label: "Academic performance" },
-        ].map((t) => (
-          <button
-            key={t.k}
-            onClick={() => setTab(t.k)}
-            style={{
-              padding: "6px 14px", borderRadius: 999,
-              background: tab === t.k ? "var(--accent)" : "var(--bg-2)",
-              color: tab === t.k ? "#fff" : "var(--ink-2)",
-              border: 0, cursor: "pointer", fontSize: 12.5, fontWeight: 500,
-            }}
-          >{t.label}</button>
-        ))}
+      <div className="card" style={{ marginBottom: 14 }}>
+        <div className="tabs" role="tablist" aria-label="Report">
+          {[
+            { k: "pl",       label: "Monthly P&L" },
+            { k: "fees",     label: "Fee collection" },
+            { k: "donors",   label: "Donation summary" },
+            { k: "strength", label: "Student strength" },
+            { k: "teachers", label: "Teacher attendance" },
+            { k: "academic", label: "Academic performance" },
+          ].map((t) => (
+            <button
+              key={t.k}
+              type="button"
+              role="tab"
+              aria-selected={tab === t.k}
+              className={`tab ${tab === t.k ? "active" : ""}`}
+              onClick={() => setTab(t.k)}
+            >{t.label}</button>
+          ))}
+        </div>
       </div>
 
       {/* Tab content */}
@@ -1039,18 +1038,18 @@ function ReportsKpiStrip({ pl, expensesCount, donationSummary, studentsCount, st
               role="button"
               tabIndex={0}
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(isActive ? null : c.key); } }}
-              className="kpi"
+              className="kpi kpi-clickable"
+              aria-expanded={isActive}
               style={{
-                cursor: "pointer",
                 borderColor: isActive ? "var(--accent)" : undefined,
-                boxShadow: isActive ? "0 0 0 2px var(--accent-soft, #fde6d6)" : undefined,
+                boxShadow: isActive ? "0 0 0 3px var(--ring)" : undefined,
               }}
             >
               <div className="kpi-top">
                 <div className="lbl">{c.label}</div>
                 {c.puck && (
-                  <div className={`kpi-puck ${c.puck}`}>
-                    <Icon name={c.puckIcon} size={16} />
+                  <div className={`kpi-puck ${c.puck}`} aria-hidden="true">
+                    <Icon name={c.puckIcon} size={15} />
                   </div>
                 )}
               </div>
@@ -1059,8 +1058,9 @@ function ReportsKpiStrip({ pl, expensesCount, donationSummary, studentsCount, st
               </div>
               <div className="meta">
                 <span>{c.sub}</span>
-                <span style={{ marginLeft: "auto", color: isActive ? "var(--accent)" : "var(--ink-4)", fontSize: 11 }}>
-                  {isActive ? "Hide ▲" : "Show ▼"}
+                <span style={{ marginLeft: "auto", color: isActive ? "var(--accent)" : "var(--ink-4)", display: "inline-flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
+                  {isActive ? "Hide" : "Breakdown"}
+                  <Icon name={isActive ? "chevronUp" : "chevronDown"} size={11} />
                 </span>
               </div>
             </div>
@@ -1073,8 +1073,7 @@ function ReportsKpiStrip({ pl, expensesCount, donationSummary, studentsCount, st
           className="card"
           style={{
             marginTop: 10,
-            border: "1px solid var(--accent, #c8510a)",
-            borderRadius: 12,
+            borderColor: "var(--accent)",
           }}
         >
           <div className="card-head">
@@ -1092,7 +1091,11 @@ function ReportsKpiStrip({ pl, expensesCount, donationSummary, studentsCount, st
           </div>
           <div className="card-body" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {active.rows.length === 0 ? (
-              <div className="empty">Nothing to show yet.</div>
+              <EmptyState
+                icon="reports"
+                title="Nothing in this range"
+                body="Widen the date range, or record the first entry for this report to populate the breakdown."
+              />
             ) : (
               active.rows.map((r, i) => (
                 <ExpandableRow key={i} row={r} />

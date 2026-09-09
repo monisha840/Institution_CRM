@@ -115,7 +115,7 @@ function ModalShell({ title, sub, onClose, children, width = 460 }) {
   }, [onClose]);
   return (
     <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: width, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
@@ -142,7 +142,7 @@ function Field({ label, children, hint }) {
   );
 }
 
-export default function ScreenInventory({ E, refresh, role }) {
+export default function ScreenInventory({ E, refresh, role, searchFocus, clearSearchFocus }) {
   const canEdit = role === "principal" || role === "admin";
   const [filter, setFilter] = useState("all");
   // "" = no class filter; "all" = only shared (cls === "all") items; any other
@@ -150,6 +150,15 @@ export default function ScreenInventory({ E, refresh, role }) {
   // items are available to every class).
   const [classFilter, setClassFilter] = useState("");
   const [showAdd, setShowAdd] = useState(false);
+  // Quick create (top bar / command palette) navigates here and asks the
+  // screen to open the create flow it already owns.
+  useEffect(() => {
+    if (searchFocus?.action !== "create") return;
+    setShowAdd(true);
+    clearSearchFocus?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchFocus]);
+
   const [showImport, setShowImport] = useState(false);
   const [showMove, setShowMove] = useState(null); // 'in' | 'out' | 'return' | null
   const [movePreset, setMovePreset] = useState(null); // pre-selected itemId
@@ -540,15 +549,7 @@ export default function ScreenInventory({ E, refresh, role }) {
                 key={f.k}
                 type="button"
                 onClick={() => setFilter(f.k)}
-                className="btn sm"
-                style={{
-                  height: 28,
-                  padding: "0 10px",
-                  fontSize: 11.5,
-                  background: active ? "var(--ink)" : "var(--card)",
-                  color: active ? "var(--bg)" : "var(--ink-2)",
-                  borderColor: active ? "var(--ink)" : "var(--rule)",
-                }}
+                className={`btn sm ${active ? "accent" : ""}`}
               >
                 {f.label}
               </button>

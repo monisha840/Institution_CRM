@@ -2,12 +2,21 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Icon from "../Icon";
-import { KPI } from "../ui";
+import { KPI, EmptyState } from "../ui";
 
-export default function ScreenMeetings({ E, refresh, role, session }) {
+export default function ScreenMeetings({ E, refresh, role, session, searchFocus, clearSearchFocus }) {
   const canCreate = ["admin", "principal", "academic_director", "teacher"].includes(role);
   const [meetings, setMeetings] = useState([]);
   const [showAdd, setShowAdd] = useState(false);
+  // Quick create (top bar / command palette) navigates here and asks the
+  // screen to open the create flow it already owns.
+  useEffect(() => {
+    if (searchFocus?.action !== "create") return;
+    setShowAdd(true);
+    clearSearchFocus?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchFocus]);
+
   const [busyId, setBusyId] = useState(null);
   const [err, setErr] = useState("");
   const [filter, setFilter] = useState("upcoming"); // upcoming | past | all
@@ -163,11 +172,16 @@ export default function ScreenMeetings({ E, refresh, role, session }) {
         {err && <div style={{ background: "var(--err-soft, #fbe1d8)", color: "var(--err, #b13c1c)", padding: "9px 14px", fontSize: 12 }}>{err}</div>}
         <div style={{ display: "flex", flexDirection: "column" }}>
           {filtered.length === 0 && (
-            <div className="empty" style={{ padding: 28 }}>
-              {meetings.length === 0
-                ? (canCreate ? "No meetings yet. Click Schedule meeting." : "No meetings have been scheduled for you.")
-                : `No ${filter} meetings.`}
-            </div>
+            <EmptyState
+              icon="clock"
+              title={meetings.length === 0 ? "No meetings scheduled" : `Nothing ${filter}`}
+              body={meetings.length === 0
+                ? "Parent-teacher meetings, class meetings and one-to-ones all live here, with attendees and reminders."
+                : "Try another filter to see meetings in a different state."}
+              action={meetings.length === 0 && canCreate
+                ? <button className="btn accent sm" onClick={() => setShowAdd(true)}><Icon name="plus" size={12} />Schedule meeting</button>
+                : null}
+            />
           )}
           {filtered.map((m) => {
             const when = new Date(m.scheduledAt);
@@ -307,7 +321,7 @@ function AddMeetingModal({ classes, onClose, onSubmit }) {
   }
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)", display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto" }}>
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "var(--overlay)", display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto" }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 520, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
         <div className="card-head">
           <div><div className="card-title">Schedule meeting</div><div className="card-sub">PTM, class meeting, 1:1</div></div>

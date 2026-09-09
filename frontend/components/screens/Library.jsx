@@ -70,7 +70,7 @@ function ModalShell({ title, sub, onClose, children, width = 520 }) {
   }, [onClose]);
   return (
     <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: width, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
@@ -115,7 +115,7 @@ function daysUntil(iso) {
 }
 
 // ---------- main screen --------------------------------------------------
-export default function ScreenLibrary({ E, refresh, role, session }) {
+export default function ScreenLibrary({ E, refresh, role, session, searchFocus, clearSearchFocus }) {
   // Only librarian-class roles get the full management UI (catalog, KPIs,
   // import, issue/return). Teachers and parents see a focused "my borrowed
   // books" view — no catalog, no system-wide stock numbers, no other
@@ -192,6 +192,15 @@ export default function ScreenLibrary({ E, refresh, role, session }) {
 
   // ---------- modal state ----------
   const [showAddBook, setShowAddBook] = useState(false);
+  // Quick create (top bar / command palette) navigates here and asks the
+  // screen to open the create flow it already owns.
+  useEffect(() => {
+    if (searchFocus?.action !== "create") return;
+    setShowAddBook(true);
+    clearSearchFocus?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchFocus]);
+
   const [editingBook, setEditingBook] = useState(null);
   const [borrowingBook, setBorrowingBook] = useState(null);
   const [showImport, setShowImport] = useState(false);
@@ -496,12 +505,7 @@ export default function ScreenLibrary({ E, refresh, role, session }) {
             <button
               key={t.k}
               onClick={() => setTab(t.k)}
-              style={{
-                padding: "6px 14px", borderRadius: 999,
-                background: tab === t.k ? "var(--accent)" : "var(--bg-2)",
-                color: tab === t.k ? "#fff" : "var(--ink-2)",
-                border: 0, cursor: "pointer", fontSize: 12.5, fontWeight: 500,
-              }}
+              className={`seg-pill ${tab === t.k ? "active" : ""}`}
             >{t.label}</button>
           ))}
         </div>
@@ -612,7 +616,7 @@ function RemoveAllBooksModal({ totalBooks, activeLoans, onClose, onConfirm }) {
 
   return (
     <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16,
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{

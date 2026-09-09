@@ -117,7 +117,16 @@ const inputStyle = {
   color: "var(--ink)",
 };
 
+// Settings is grouped into categories rather than presented as one enormous
+// form. "Academic" holds the two calendar cards; the rest map 1:1 onto
+// SECTIONS, so adding a section automatically adds its tab.
+const CATEGORIES = [
+  { key: "academic", label: "Academic" },
+  ...SECTIONS.map((s) => ({ key: s.key, label: s.t })),
+];
+
 export default function ScreenSettings({ role, E, refresh }) {
+  const [category, setCategory] = useState("academic");
   const [settings, setSettings] = useState(() => normalizeSettings({}));
   const [draft, setDraft] = useState(() => normalizeSettings({}));
   const [busy, setBusy] = useState(false);
@@ -226,8 +235,23 @@ export default function ScreenSettings({ role, E, refresh }) {
         </div>
       </div>
 
-      {/* Holidays / sudden leave — subtract from every class's base working days */}
       <div className="card" style={{ marginBottom: 16 }}>
+        <div className="tabs" role="tablist" aria-label="Settings category">
+          {CATEGORIES.map((c) => (
+            <button
+              key={c.key}
+              type="button"
+              role="tab"
+              aria-selected={category === c.key}
+              className={`tab ${category === c.key ? "active" : ""}`}
+              onClick={() => setCategory(c.key)}
+            >{c.label}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Holidays / sudden leave — subtract from every class's base working days */}
+      <div className="card" style={{ marginBottom: 16, display: category === "academic" ? undefined : "none" }}>
         <div className="card-head">
           <div>
             <div className="card-title">Academic · Holidays &amp; sudden leave</div>
@@ -295,7 +319,7 @@ export default function ScreenSettings({ role, E, refresh }) {
       </div>
 
       {/* Working days — per class; effective = base − holidays */}
-      <div className="card" style={{ marginBottom: 16 }}>
+      <div className="card" style={{ marginBottom: 16, display: category === "academic" ? undefined : "none" }}>
         <div className="card-head">
           <div>
             <div className="card-title">Academic · Working days by class</div>
@@ -370,8 +394,8 @@ export default function ScreenSettings({ role, E, refresh }) {
       </div>
 
       <div className="grid g-2">
-        {SECTIONS.map((s) => (
-          <div className="card" key={s.key}>
+        {SECTIONS.filter((s) => s.key === category).map((s) => (
+          <div className="card" key={s.key} style={{ gridColumn: "1 / -1" }}>
             <div className="card-head">
               <div><div className="card-title">{s.t}</div></div>
             </div>
@@ -379,14 +403,15 @@ export default function ScreenSettings({ role, E, refresh }) {
               {s.fields.map((it) => {
                 const value = draft?.[s.key]?.[it.k] ?? "";
                 return (
-                  <div className="lrow" key={it.k}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 11, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 500 }}>{it.label}</div>
+                  <div className="lrow" key={it.k} style={{ alignItems: "flex-start" }}>
+                    <div className="field" style={{ flex: 1, minWidth: 0 }}>
+                      <label className="field-label" htmlFor={`set-${s.key}-${it.k}`}>{it.label}</label>
                       {canEdit && it.options ? (
                         <select
+                          id={`set-${s.key}-${it.k}`}
+                          className="select"
                           value={value || it.options[0].value}
                           onChange={(e) => setField(s.key, it.k, e.target.value)}
-                          style={inputStyle}
                         >
                           {it.options.map((o) => (
                             <option key={o.value} value={o.value}>{o.label}</option>
@@ -394,22 +419,21 @@ export default function ScreenSettings({ role, E, refresh }) {
                         </select>
                       ) : canEdit ? (
                         <input
+                          id={`set-${s.key}-${it.k}`}
+                          className="input"
                           type="text"
                           value={value}
                           onChange={(e) => setField(s.key, it.k, e.target.value)}
                           placeholder={it.placeholder || "—"}
-                          style={inputStyle}
                         />
                       ) : (
-                        <div style={{ fontSize: 13, marginTop: 3 }}>
+                        <div style={{ fontSize: 13 }}>
                           {it.options
                             ? (it.options.find((o) => o.value === value) || it.options[0]).label
                             : (value || "—")}
                         </div>
                       )}
-                      {it.hint && (
-                        <div style={{ fontSize: 10.5, color: "var(--ink-4)", marginTop: 4 }}>{it.hint}</div>
-                      )}
+                      {it.hint && <div className="field-hint">{it.hint}</div>}
                     </div>
                   </div>
                 );

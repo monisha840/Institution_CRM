@@ -7,7 +7,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Icon from "../Icon";
-import { KPI } from "../ui";
+import { KPI, SkeletonTable } from "../ui";
 import { formatClassLabel } from "@/lib/format";
 
 const ROOT_CAUSE_CATEGORIES = [
@@ -207,7 +207,7 @@ export default function ScreenScaleAdmin({ E, role, session, refresh }) {
           <span className="chip warn"><span className="dot" />{(metrics?.weakerStudents || []).length} flagged</span>
         </div>
         {!metrics ? (
-          <div className="empty" style={{ padding: 30 }}>Loading…</div>
+          <SkeletonTable rows={5} cols={4} />
         ) : (metrics.weakerStudents || []).length === 0 ? (
           <div className="empty" style={{ padding: 30 }}>No students flagged in the current window — good news.</div>
         ) : (

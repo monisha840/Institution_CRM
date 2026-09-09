@@ -662,7 +662,9 @@ export default function ScreenTransport({ E, refresh, role, session }) {
                     </div>
                   </div>
                   {canEdit && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                    /* 2x2 grid rather than a four-high stack — same four
+                       actions, half the row height, full-size tap targets. */
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(2, auto)", gap: 2, flexShrink: 0 }}>
                       <button
                         className="icon-btn"
                         onClick={(e) => { e.stopPropagation(); setAssigning(r); }}
@@ -1258,7 +1260,7 @@ function ModalShell({ title, sub, onClose, children, width = 520 }) {
   }, [onClose]);
   return (
     <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: width, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>

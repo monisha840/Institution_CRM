@@ -40,6 +40,15 @@ export default function ScreenStaff({ E, refresh, role, session, searchFocus, cl
   const canEdit = role === "principal" || role === "admin";
   const [filter, setFilter] = useState("all");
   const [showAdd, setShowAdd] = useState(false);
+  // Quick create (top bar / command palette) navigates here and asks the
+  // screen to open the create flow it already owns.
+  useEffect(() => {
+    if (searchFocus?.action !== "create") return;
+    setShowAdd(true);
+    clearSearchFocus?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchFocus]);
+
   const [toast, setToast] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
   const [docsFor, setDocsFor] = useState(null); // staff being shown in the docs modal
@@ -607,7 +616,7 @@ function ModalShell({ title, sub, onClose, children, width = 520 }) {
     <div
       onClick={onClose}
       style={{
-        position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+        position: "fixed", inset: 0, background: "var(--overlay)",
         display: "grid", placeItems: "center", zIndex: 250, padding: 16,
       }}
     >
@@ -686,7 +695,7 @@ function ImportStaffModal({ onClose, onSubmitCsv }) {
 
   return (
     <div onClick={phase === "importing" ? undefined : onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16,
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 520 }}>
@@ -865,7 +874,7 @@ function ImportStaffLoginsModal({ logins, onClose }) {
   };
   return (
     <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 260, padding: 16,
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 600 }}>

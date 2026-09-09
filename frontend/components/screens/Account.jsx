@@ -8,7 +8,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Icon from "../Icon";
-import { AvatarChip } from "../ui";
+import { AvatarChip, Skeleton } from "../ui";
 
 const ROLE_LABEL = {
   admin: "Admin",
@@ -99,7 +99,18 @@ export default function ScreenAccount({ session, refresh }) {
         </div>
 
         {loading ? (
-          <div className="empty" style={{ padding: 40 }}>Loading…</div>
+          <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 14 }} aria-busy="true">
+            <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+              <Skeleton w={44} h={44} r="50%" />
+              <div style={{ flex: 1 }}>
+                <Skeleton w="42%" h={14} />
+                <Skeleton w="28%" h={10} style={{ marginTop: 8 }} />
+              </div>
+            </div>
+            <Skeleton w="100%" h={34} r="var(--radius-sm)" />
+            <Skeleton w="100%" h={34} r="var(--radius-sm)" />
+            <Skeleton w="70%" h={34} r="var(--radius-sm)" />
+          </div>
         ) : tab === "profile" ? (
           <ProfileForm
             profile={profile}

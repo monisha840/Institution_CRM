@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Icon from "../Icon";
-import { KPI } from "../ui";
+import { KPI, EmptyState } from "../ui";
 import { formatClassLabel } from "@/backend/lib/format.js";
 
 // The school runs one stream per grade (no Section A / Section B split),
@@ -241,7 +241,13 @@ export default function ScreenClasses({ E, refresh, role }) {
       </div>
 
       {classes.length === 0 ? (
-        <div className="card"><div className="empty" style={{ padding: 60 }}>No classes defined yet. Click “Add class” to start.</div></div>
+        <div className="card">
+          <EmptyState
+            icon="book"
+            title="No classes defined yet"
+            body="Classes are the backbone of attendance, the timetable, exams and the fee structure — define them first and every other screen switches on."
+          />
+        </div>
       ) : (
         <div className="grid g-3">
           {classes.map((c) => (
@@ -557,7 +563,7 @@ function AddClassModal({ existing, onClose, onSubmit }) {
   };
   return (
     <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16,
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 460 }}>
@@ -660,7 +666,7 @@ function EditClassModal({ cls, subjectOptions = [], onClose, onSubmit }) {
 
   return (
     <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16,
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 520, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
@@ -737,7 +743,7 @@ function ConfirmDialog({ title, body, danger, confirmLabel = "Confirm", onCancel
   }, [onCancel]);
   return (
     <div onClick={onCancel} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 300, padding: 16,
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 420 }}>

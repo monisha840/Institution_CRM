@@ -49,7 +49,7 @@ function ModalShell({ title, sub, onClose, children, width = 520 }) {
   }, [onClose]);
   return (
     <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: width, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
@@ -76,12 +76,21 @@ function Field({ label, children, hint }) {
   );
 }
 
-export default function ScreenCommunication({ E, refresh, role, session }) {
+export default function ScreenCommunication({ E, refresh, role, session, searchFocus, clearSearchFocus }) {
   const canSend = role === "principal" || role === "admin" || role === "academic_director" || role === "teacher";
   // Parents only see the read-only "Recent broadcasts" log — no compose, no
   // templates, no audience picker. They consume messages, they don't send them.
   const isParent = role === "parent";
   const [showBroadcast, setShowBroadcast] = useState(false);
+  // Quick create (top bar / command palette) navigates here and asks the
+  // screen to open the create flow it already owns.
+  useEffect(() => {
+    if (searchFocus?.action !== "create") return;
+    setShowBroadcast(true);
+    clearSearchFocus?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchFocus]);
+
   const [broadcastPrefill, setBroadcastPrefill] = useState(null);
   const [showImport, setShowImport] = useState(false);
   const [showTemplate, setShowTemplate] = useState(false);

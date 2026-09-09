@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../Icon";
-import { KPI, AvatarChip, StatusChip } from "../ui";
+import { KPI, AvatarChip, StatusChip, EmptyState, SearchInput } from "../ui";
 import DocumentsPanel from "../DocumentsPanel";
 import CredentialsModal from "../CredentialsModal";
 import { resolveSchool, downloadPdf } from "@/lib/export";
@@ -76,6 +76,15 @@ export default function ScreenStudents({ E, refresh, role, session, searchFocus,
       if (target.__status === "archived") setView("archived");
       setProfileOf(target);
     }
+    clearSearchFocus?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchFocus]);
+
+  // Quick create routes here with { action: "create" } — open the existing
+  // admission form rather than introducing a second create path.
+  useEffect(() => {
+    if (searchFocus?.action !== "create") return;
+    setShowAdmission(true);
     clearSearchFocus?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchFocus]);
@@ -389,9 +398,11 @@ export default function ScreenStudents({ E, refresh, role, session, searchFocus,
 
       <div className="page-head">
         <div>
-          <div className="page-eyebrow">People · Roster</div>
-          <div className="page-title">Students <span className="amber">at school</span></div>
-          <div className="page-sub">{roster.length} {roster.length === 1 ? "child" : "children"} on roll · {(E.CLASSES || []).length} classes</div>
+          <div className="page-eyebrow">People</div>
+          <div className="page-title">Students</div>
+          <div className="page-sub">
+            Every child on roll, their class, fee position and transport — searchable and filterable.
+          </div>
         </div>
         <div className="page-actions">
           <button className="btn" onClick={() => setShowImport(true)}><Icon name="upload" size={13} />Import</button>
@@ -486,44 +497,6 @@ export default function ScreenStudents({ E, refresh, role, session, searchFocus,
             </div>
           </div>
           <div className="card-actions">
-            {/* Search by name or phone digits. Sticks to the left of the
-                view toggle so it reads like a primary filter. The clear
-                button appears once there's text so admins can reset
-                without selecting the text first. */}
-            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-              <Icon
-                name="search"
-                size={12}
-                style={{ position: "absolute", left: 9, color: "var(--ink-4)", pointerEvents: "none" }}
-              />
-              <input
-                className="input"
-                type="search"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search name or phone"
-                style={{
-                  height: 30,
-                  padding: "0 28px 0 26px",
-                  fontSize: 12.5,
-                  width: 200,
-                }}
-              />
-              {search && (
-                <button
-                  type="button"
-                  onClick={() => setSearch("")}
-                  aria-label="Clear search"
-                  style={{
-                    position: "absolute", right: 6,
-                    background: "none", border: 0, padding: 2,
-                    cursor: "pointer", color: "var(--ink-3)", lineHeight: 0,
-                  }}
-                >
-                  <Icon name="x" size={11} />
-                </button>
-              )}
-            </div>
             <div className="segmented">
               <button className={view === "active" ? "active" : ""} onClick={() => setView("active")}>
                 Active · {activeRoster.length}
@@ -532,34 +505,48 @@ export default function ScreenStudents({ E, refresh, role, session, searchFocus,
                 Archived · {archivedRoster.length}
               </button>
             </div>
-            <div className="segmented" style={{ flexWrap: "wrap" }}>
-              <button className={classFilter === "All" ? "active" : ""} onClick={() => setClassFilter("All")}>All</button>
-              {(E.CLASSES || []).map((c) => (
-                <button
-                  key={c.n}
-                  className={classFilter === String(c.n) ? "active" : ""}
-                  onClick={() => setClassFilter(String(c.n))}
-                  title={c.label || formatClassLabel(String(c.n))}
-                >
-                  {c.label || formatClassLabel(String(c.n))}
-                </button>
-              ))}
-            </div>
-            <div style={{ position: "relative" }}>
-              <button className={`btn sm ${classFilter !== "All" ? "accent" : ""}`} onClick={() => setFilterOpen((v) => !v)}>
-                <Icon name="filter" size={12} />
-                {classFilter === "All" ? "Filter" : formatClassLabel(classFilter)}
-              </button>
-              {filterOpen && (
-                <FilterMenu
-                  classes={E.CLASSES || []}
-                  value={classFilter}
-                  onClose={() => setFilterOpen(false)}
-                  onPick={(v) => { setClassFilter(v); setFilterOpen(false); }}
-                />
-              )}
-            </div>
           </div>
+        </div>
+
+        {/* Toolbar — search on the left, class filter on the right. Kept on
+            its own row so neither ever gets squeezed out of the header. */}
+        <div className="toolbar" style={{ margin: 0, padding: "12px 18px", borderBottom: "1px solid var(--rule-2)" }}>
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Search name or phone"
+            style={{ width: 260, maxWidth: "100%" }}
+          />
+          <div className="segmented" style={{ minWidth: 0 }}>
+            <button className={classFilter === "All" ? "active" : ""} onClick={() => setClassFilter("All")}>All</button>
+            {(E.CLASSES || []).map((c) => (
+              <button
+                key={c.n}
+                className={classFilter === String(c.n) ? "active" : ""}
+                onClick={() => setClassFilter(String(c.n))}
+                title={c.label || formatClassLabel(String(c.n))}
+              >
+                {c.label || formatClassLabel(String(c.n))}
+              </button>
+            ))}
+          </div>
+          <div style={{ position: "relative", marginLeft: "auto" }}>
+            <button className={`btn sm ${classFilter !== "All" ? "accent" : ""}`} onClick={() => setFilterOpen((v) => !v)}>
+              <Icon name="filter" size={12} />
+              {classFilter === "All" ? "Filter" : formatClassLabel(classFilter)}
+            </button>
+            {filterOpen && (
+              <FilterMenu
+                classes={E.CLASSES || []}
+                value={classFilter}
+                onClose={() => setFilterOpen(false)}
+                onPick={(v) => { setClassFilter(v); setFilterOpen(false); }}
+              />
+            )}
+          </div>
+          <span className="field-hint" style={{ whiteSpace: "nowrap" }}>
+            {visible.length} of {view === "archived" ? archivedRoster.length : activeRoster.length} shown
+          </span>
         </div>
 
         {picked.size > 0 && (
@@ -591,7 +578,7 @@ export default function ScreenStudents({ E, refresh, role, session, searchFocus,
                     disabled={eligibleIds.length === 0}
                   />
                 </th>
-                <th>Student</th>
+                <th style={{ minWidth: 190 }}>Student</th>
                 <th>ID</th>
                 <th>Class</th>
                 {!isTeacher && <th>Parent</th>}
@@ -604,7 +591,28 @@ export default function ScreenStudents({ E, refresh, role, session, searchFocus,
             </thead>
             <tbody>
               {visible.length === 0 && (
-                <tr><td colSpan={isTeacher ? 9 : 10} className="empty">No students match this filter.</td></tr>
+                <tr><td colSpan={isTeacher ? 9 : 10} style={{ padding: 0 }}>
+                  {roster.length === 0 ? (
+                    <EmptyState
+                      icon="students"
+                      title="No students on roll yet"
+                      body="The roster is the backbone of fees, attendance and transport — add the first admission to switch those screens on."
+                      action={<button className="btn accent sm" onClick={() => setShowAdmission(true)}><Icon name="plus" size={12} />New admission</button>}
+                      secondary={<button className="btn sm" onClick={() => setShowImport(true)}><Icon name="upload" size={12} />Import a list</button>}
+                    />
+                  ) : (
+                    <EmptyState
+                      icon="search"
+                      title="No students match these filters"
+                      body="Try a different class, clear the search, or switch between active and archived records."
+                      action={
+                        <button className="btn sm" onClick={() => { setSearch(""); setClassFilter("All"); }}>
+                          <Icon name="refresh" size={12} />Clear filters
+                        </button>
+                      }
+                    />
+                  )}
+                </td></tr>
               )}
               {visible.map((s) => (
                 <tr
@@ -623,7 +631,7 @@ export default function ScreenStudents({ E, refresh, role, session, searchFocus,
                   <td>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <AvatarChip initials={s.name.split(" ").map((n) => n[0]).join("")} />
-                      <span style={{ fontSize: 12.5, fontWeight: 500, textDecoration: tcByStudent[s.id] === "issued" ? "line-through" : "none" }}>
+                      <span className="t-primary" style={{ fontSize: 13, textDecoration: tcByStudent[s.id] === "issued" ? "line-through" : "none" }}>
                         {s.name}
                         {s.__added && tcByStudent[s.id] !== "issued" && (
                           <span className="chip ok" style={{ marginLeft: 6, fontSize: 10, height: 18, padding: "0 6px" }}>
@@ -651,12 +659,12 @@ export default function ScreenStudents({ E, refresh, role, session, searchFocus,
                       </span>
                     </div>
                   </td>
-                  <td style={{ fontFamily: "var(--font-mono)", fontSize: 11.5, color: "var(--ink-3)" }}>{s.id}</td>
+                  <td className="nowrap" style={{ fontFamily: "var(--font-mono)", fontSize: 11.5, color: "var(--ink-3)" }}>{s.id}</td>
                   <td><span className="chip">{formatClassLabel(s.cls)}</span></td>
                   {!isTeacher && (
-                    <td style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--ink-3)" }}>
+                    <td style={{ fontSize: 12.5, color: "var(--ink-2)" }}>
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                        <span>{s.parent}</span>
+                        <span style={{ whiteSpace: "nowrap" }}>{s.parent}</span>
                         {canEdit && (
                           <button
                             className="icon-btn"
@@ -691,7 +699,7 @@ export default function ScreenStudents({ E, refresh, role, session, searchFocus,
                   <td style={{ fontSize: 12, color: "var(--ink-3)" }}>
                     <TransportCell student={s} />
                   </td>
-                  <td style={{ fontSize: 12, color: "var(--ink-3)" }}>{s.joined}</td>
+                  <td className="nowrap" style={{ fontSize: 12, color: "var(--ink-3)" }}>{s.joined}</td>
                   <td>
                     <button
                       className="icon-btn"
@@ -1028,7 +1036,7 @@ function EditFeeModal({ student, summary, onClose, onSubmit }) {
     <div
       onClick={onClose}
       style={{
-        position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+        position: "fixed", inset: 0, background: "var(--overlay)",
         display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
       }}
     >
@@ -1204,7 +1212,7 @@ function ModalShell({ title, sub, onClose, children, width = 460 }) {
     <div
       onClick={onClose}
       style={{
-        position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+        position: "fixed", inset: 0, background: "var(--overlay)",
         display: "grid", placeItems: "center", zIndex: 250, padding: 16,
       }}
     >
@@ -2053,7 +2061,7 @@ function ConfirmArchive({ student, onCancel, onConfirm }) {
   };
   return (
     <div onClick={onCancel} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16,
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 460 }}>
@@ -2177,7 +2185,7 @@ function ProfileModal({ student, onClose, onMessage, onTC, hideContact = false, 
   return (
     <div
       onClick={onClose}
-      style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)", display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto" }}
+      style={{ position: "fixed", inset: 0, background: "var(--overlay)", display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto" }}
     >
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 760, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
         {/* Header */}
@@ -2497,7 +2505,7 @@ function MessageParentModal({ student, onClose, flash }) {
 
   return (
     <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16,
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 540 }}>
@@ -2576,7 +2584,7 @@ function IssueTcModal({ student, onClose, onIssued, flash }) {
 
   return (
     <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16,
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 460 }}>

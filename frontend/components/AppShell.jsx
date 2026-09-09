@@ -198,6 +198,14 @@ export default function AppShell({ initialData, session }) {
   // panel stays the source of truth.
   const [reminderToast, setReminderToast] = useState(null);
   const userMenuRef = useRef(null);
+  // Platform-correct modifier glyph. Resolved after mount so the server and
+  // the first client render agree (navigator isn't available during SSR).
+  const [modKey, setModKey] = useState("Ctrl ");
+  useEffect(() => {
+    try {
+      if (/Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)) setModKey("⌘");
+    } catch {}
+  }, []);
 
   // Role comes from the server-issued session — never from localStorage.
   const role = session?.role || "parent";
@@ -623,75 +631,84 @@ export default function AppShell({ initialData, session }) {
   // having to fetch /api/permissions itself.
   const E = { ...scopedData, ACCESS: access };
 
+  // Screens this role can actually reach. Drives Quick create and the
+  // mobile tab bar so neither can offer a destination the sidebar hides.
+  const allowedIds = getAllowedNavIds(role, permissions, permExplicit).filter((id) => SCREENS[id]);
+
+  // Navigate to a screen and ask it to open its own create flow. Screens
+  // that understand `{ action: "create" }` pop their existing Add modal;
+  // the rest simply land on the screen. No new create logic is introduced.
+  const startCreate = (screen) => {
+    setCurrent(screen);
+    setSearchFocus({ screen, action: "create" });
+    setMobileDrawerOpen(false);
+  };
+
+  // Quick create — one entry per entity this deployment actually has, each
+  // pointed at the screen that already owns that create flow.
+  const quickCreateItems = [
+    { id: "students",     label: "Student",              icon: "students" },
+    { id: "enquiries",    label: "Admission enquiry",    icon: "enquiry" },
+    { id: "staff",        label: V.educator,             icon: "staff" },
+    { id: "volunteers",   label: "Volunteer",            icon: "users" },
+    { id: "tasks",        label: "Task",                 icon: "check" },
+    { id: "meetings",     label: "Meeting",              icon: "clock" },
+    { id: "communication", label: "Broadcast",           icon: "megaphone" },
+    { id: "money",        label: "Expense",              icon: "money" },
+    { id: "inventory",    label: "Inventory item",       icon: "inventory" },
+    { id: "library",      label: "Library book",         icon: "book" },
+    { id: "complaints",   label: "Complaint",            icon: "complaint" },
+  ]
+    .filter((it) => allowedIds.includes(it.id))
+    .map((it) => ({ ...it, onSelect: () => startCreate(it.id) }));
+
+  const initials = (session?.name || "U").split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase();
+
   const userMenu = (
     <div className="user-menu-wrap" ref={userMenuRef} style={{ position: "relative" }}>
       <button
         className="user-menu-btn"
         onClick={() => setShowUserMenu((s) => !s)}
         title={session?.email}
-        style={{
-          display: "inline-flex", alignItems: "center", gap: 8,
-          padding: "5px 10px 5px 5px",
-          background: "var(--bg-2)", border: "1px solid var(--line, #e5dfd1)",
-          borderRadius: 999, cursor: "pointer", color: "var(--ink)",
-          fontSize: 12, fontWeight: 500,
-        }}
+        aria-haspopup="menu"
+        aria-expanded={showUserMenu}
       >
-        <span
-          style={{
-            width: 24, height: 24, borderRadius: "50%",
-            background: "linear-gradient(135deg, var(--accent), var(--accent-2))",
-            color: "#fff", display: "grid", placeItems: "center",
-            fontSize: 10.5, fontWeight: 600,
-          }}
-        >
-          {(session?.name || "U").split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase()}
-        </span>
-        <span style={{ maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {session?.name}
-        </span>
+        <span className="avatar sm" aria-hidden="true">{initials}</span>
+        <span className="user-menu-name">{session?.name}</span>
         <Icon name="chevronDown" size={11} />
       </button>
       {showUserMenu && (
         <div
-          style={{
-            position: "absolute", right: 0, top: "calc(100% + 6px)",
-            minWidth: 220,
-            background: "var(--card, #fff)",
-            border: "1px solid var(--line, #e5dfd1)",
-            borderRadius: 10, padding: 6, zIndex: 100,
-            boxShadow: "0 16px 40px -20px rgba(0,0,0,0.25)",
-          }}
+          className="menu-surface"
+          role="menu"
+          style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", minWidth: 236, zIndex: 100 }}
         >
-          <div style={{ padding: "8px 10px 10px", borderBottom: "1px dashed var(--line, #e5dfd1)" }}>
-            <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--ink)" }}>{session?.name}</div>
-            <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 2 }}>{session?.email}</div>
-            <div
-              style={{
-                marginTop: 6, display: "inline-block",
-                fontSize: 10, padding: "2px 7px", borderRadius: 4,
-                background: "var(--accent-soft)", color: "var(--accent)", fontWeight: 500,
-              }}
-            >
-              {ROLE_LABEL[role] || role}
-            </div>
+          <div style={{ padding: "8px 10px 10px", borderBottom: "1px solid var(--rule-2)", marginBottom: 4 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{session?.name}</div>
+            <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2, wordBreak: "break-all" }}>{session?.email}</div>
+            <span className="chip accent" style={{ marginTop: 8 }}>{ROLE_LABEL[role] || role}</span>
           </div>
-          <button
-            onClick={() => { setShowUserMenu(false); setCurrent("account"); }}
-            style={{
-              width: "100%", textAlign: "left",
-              padding: "8px 10px", marginTop: 4,
-              background: "transparent", border: 0, borderRadius: 6,
-              cursor: "pointer", color: "var(--ink-2)", fontSize: 12.5,
-              display: "flex", alignItems: "center", gap: 8,
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-2)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-          >
-            <Icon name="user" size={13} />
+          <button className="menu-item" role="menuitem" onClick={() => { setShowUserMenu(false); setCurrent("account"); }}>
+            <Icon name="user" size={14} />
             My account
           </button>
           <button
+            className="menu-item"
+            role="menuitem"
+            onClick={() => { setShowUserMenu(false); setSetting("theme", settings.theme === "dark" ? "light" : "dark"); }}
+          >
+            <Icon name={settings.theme === "dark" ? "sun" : "moon"} size={14} />
+            {settings.theme === "dark" ? "Light appearance" : "Dark appearance"}
+          </button>
+          <button className="menu-item" role="menuitem" onClick={() => { setShowUserMenu(false); setShowTweaks((s) => !s); }}>
+            <Icon name="sliders" size={14} />
+            Display settings
+            <span className="kbd" style={{ marginLeft: "auto" }}>{modKey}K</span>
+          </button>
+          <div className="menu-sep" />
+          <button
+            className="menu-item danger"
+            role="menuitem"
             onClick={async () => {
               try { await fetch("/api/auth/logout", { method: "POST" }); } catch {}
               try {
@@ -699,21 +716,23 @@ export default function AppShell({ initialData, session }) {
               } catch {}
               window.location.href = "/login";
             }}
-            style={{
-              width: "100%", textAlign: "left",
-              padding: "8px 10px",
-              background: "transparent", border: 0, borderRadius: 6,
-              cursor: "pointer", color: "var(--ink-2)", fontSize: 12.5,
-              display: "flex", alignItems: "center", gap: 8,
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-2)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
           >
-            <Icon name="x" size={13} />
+            <Icon name="logout" size={14} />
             Sign out
           </button>
         </div>
       )}
+      <style jsx>{`
+        .user-menu-name {
+          max-width: 140px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        @media (max-width: 900px) {
+          .user-menu-name { display: none; }
+        }
+      `}</style>
     </div>
   );
 
@@ -781,29 +800,35 @@ export default function AppShell({ initialData, session }) {
               }
             }}
             title="Toggle sidebar"
+            aria-label="Toggle navigation"
           >
-            <Icon name="menu" size={15} />
+            <Icon name="panelLeft" size={16} />
           </button>
           <GlobalSearch
             E={scopedData}
             role={role}
             setCurrent={setCurrent}
+            modKey={modKey}
+            quickActions={quickCreateItems}
             onPickItem={(item) => {
               if (item.screen) setCurrent(item.screen);
               setSearchFocus(item);
             }}
             placeholder={
               role === "parent"            ? "Search fees, messages, library, activities…" :
-              role === "teacher"           ? "Search students, leave, remarks, library, SCALE…" :
+              role === "teacher"           ? "Search students, leave, remarks, library…" :
               role === "school_accountant" ? "Search fees, expenses, students…" :
               role === "trust_accountant"  ? "Search donors, expenses, campaigns…" :
-              role === "academic_director" ? "Search students, classes, exams, SCALE, leave…" :
-              "Search students, fees, donors, staff, expenses, library…"
+              role === "academic_director" ? "Search students, classes, exams, leave…" :
+              "Search students, fees, staff, expenses, library…"
             }
           />
           <div className="topbar-right">
             {role === "admin" && (
               <InstitutionToggle value={institution} onChange={changeInstitution} />
+            )}
+            {quickCreateItems.length > 0 && (
+              <QuickCreateMenu items={quickCreateItems} />
             )}
             <NotificationsPanel E={scopedData} role={role} setCurrent={setCurrent} />
             {userMenu}
@@ -814,6 +839,15 @@ export default function AppShell({ initialData, session }) {
 
         <BrandFooter />
       </div>
+
+      {/* Bottom tab bar — the primary navigation on phones. Only ever
+          renders destinations this role can already reach. */}
+      <MobileTabBar
+        current={current}
+        setCurrent={(id) => { setCurrent(id); setMobileDrawerOpen(false); }}
+        allowedIds={allowedIds}
+        onMore={() => setMobileDrawerOpen(true)}
+      />
 
       <Tweaks show={showTweaks} settings={settings} setSetting={setSetting} />
 
@@ -827,6 +861,114 @@ export default function AppShell({ initialData, session }) {
 }
 
 
+// Quick create. Every entry routes to the screen that already owns that
+// create flow — this adds no new create logic of its own.
+function QuickCreateMenu({ items }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        className="btn accent sm qc-btn"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        title="Create"
+      >
+        <Icon name="plus" size={13} stroke={2.2} />
+        <span className="qc-label">Create</span>
+      </button>
+      {open && (
+        <div
+          className="menu-surface"
+          role="menu"
+          style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", minWidth: 216, zIndex: 100 }}
+        >
+          <div className="menu-label">Create new</div>
+          {items.map((it) => (
+            <button
+              key={it.id}
+              className="menu-item"
+              role="menuitem"
+              onClick={() => { setOpen(false); it.onSelect(); }}
+            >
+              <Icon name={it.icon} size={14} />
+              {it.label}
+            </button>
+          ))}
+        </div>
+      )}
+      <style jsx>{`
+        .qc-btn { height: 32px; }
+        @media (max-width: 640px) {
+          .qc-label { display: none; }
+          .qc-btn { width: 32px; padding: 0; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// Phone navigation. Picks the first four destinations this role can reach
+// from a preferred ordering, then a "More" button that opens the full
+// sidebar drawer. Hidden above 820px by CSS.
+const MOBILE_TAB_PREFERENCE = [
+  { id: "dashboard",     label: "Home",       icon: "home" },
+  { id: "trust",         label: "Overview",   icon: "dashboard" },
+  { id: "students",      label: "Students",   icon: "students" },
+  { id: "fees",          label: "Fees",       icon: "fees" },
+  { id: "attendance",    label: "Attendance", icon: "check" },
+  { id: "academic",      label: "Academics",  icon: "academic" },
+  { id: "transport",     label: "Transport",  icon: "bus" },
+  { id: "money",         label: "Finance",    icon: "money" },
+  { id: "communication", label: "Broadcasts", icon: "megaphone" },
+  { id: "tasks",         label: "Tasks",      icon: "check" },
+  { id: "library",       label: "Library",    icon: "book" },
+];
+
+function MobileTabBar({ current, setCurrent, allowedIds, onMore }) {
+  const tabs = MOBILE_TAB_PREFERENCE.filter((t) => allowedIds.includes(t.id)).slice(0, 4);
+  if (!tabs.length) return null;
+  const inTabs = tabs.some((t) => t.id === current);
+  return (
+    <nav className="mobile-tabbar" aria-label="Primary">
+      {tabs.map((t) => (
+        <button
+          key={t.id}
+          type="button"
+          className={`mobile-tab ${current === t.id ? "active" : ""}`}
+          onClick={() => setCurrent(t.id)}
+          aria-current={current === t.id ? "page" : undefined}
+        >
+          <Icon name={t.icon} size={20} />
+          <span>{t.label}</span>
+        </button>
+      ))}
+      <button
+        type="button"
+        className={`mobile-tab ${!inTabs ? "active" : ""}`}
+        onClick={onMore}
+        aria-label="Open all sections"
+      >
+        <Icon name="menu" size={20} />
+        <span>More</span>
+      </button>
+    </nav>
+  );
+}
+
 // Institution mode switch, shown in the top bar so school and college can be
 // demonstrated side by side without navigating into Settings. Admin only,
 // mirroring /api/settings, which rejects this write for every other role.
@@ -839,8 +981,8 @@ function InstitutionToggle({ value, onChange }) {
   };
   return (
     <div
-      className="segmented"
-      style={{ marginRight: 8, opacity: busy ? 0.6 : 1 }}
+      className="segmented institution-toggle"
+      style={{ marginRight: 4, opacity: busy ? 0.6 : 1 }}
       title="Switch between school and college presentation"
     >
       {[["school", "School"], ["college", "College"]].map(([key, label]) => (
@@ -871,63 +1013,32 @@ function ReminderToast({ toast, onDismiss, onOpen }) {
   }, [toast, onDismiss]);
   if (!toast) return null;
   return (
-    <div
-      role="status"
-      style={{
-        position: "fixed", bottom: 22, right: 22, zIndex: 8000,
-        background: "var(--card, #fff)",
-        border: "1px solid var(--rule, #e5dfd1)",
-        borderLeft: "4px solid var(--accent, #e8530e)",
-        borderRadius: 10,
-        padding: "12px 14px",
-        width: 340,
-        boxShadow: "0 18px 40px -18px rgba(0,0,0,0.35)",
-        display: "flex", flexDirection: "column", gap: 6,
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{
-          width: 26, height: 26, borderRadius: 7,
-          background: "var(--accent-soft, #fff1e6)",
-          color: "var(--accent, #e8530e)",
-          display: "grid", placeItems: "center", flexShrink: 0,
-        }}>
-          <Icon name="bell" size={13} />
+    <div className="toast-stack">
+      <div className="toast warn" role="status">
+        <span className="toast-ico" aria-hidden="true">
+          <Icon name="bell" size={12} />
         </span>
-        <div style={{ flex: 1, fontSize: 12.5, fontWeight: 600, color: "var(--ink)" }}>
-          {toast.count} reminder{toast.count === 1 ? "" : "s"} need{toast.count === 1 ? "s" : ""} attention
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="toast-title">
+            {toast.count} reminder{toast.count === 1 ? "" : "s"} need{toast.count === 1 ? "s" : ""} attention
+          </div>
+          <div className="toast-sub">{toast.title}</div>
+          {toast.sub && (
+            <div className="toast-sub truncate" style={{ color: "var(--ink-4)" }}>{toast.sub}</div>
+          )}
+          <button
+            className="btn sm"
+            style={{ marginTop: 9 }}
+            onClick={() => onOpen(toast.screen)}
+          >
+            Open {toast.screen ? toast.screen.replace(/_/g, " ") : "details"}
+            <Icon name="arrowRight" size={11} />
+          </button>
         </div>
-        <button
-          onClick={onDismiss}
-          aria-label="Dismiss"
-          style={{
-            background: "none", border: 0, cursor: "pointer",
-            color: "var(--ink-3)", padding: 2, lineHeight: 0,
-          }}
-        >
-          <Icon name="x" size={12} />
+        <button className="icon-btn" style={{ width: 22, height: 22 }} onClick={onDismiss} aria-label="Dismiss">
+          <Icon name="x" size={11} />
         </button>
       </div>
-      <div style={{ fontSize: 12, color: "var(--ink-2)", fontWeight: 500 }}>
-        {toast.title}
-      </div>
-      {toast.sub && (
-        <div style={{ fontSize: 11, color: "var(--ink-3)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-          {toast.sub}
-        </div>
-      )}
-      <button
-        onClick={() => onOpen(toast.screen)}
-        style={{
-          alignSelf: "flex-start",
-          marginTop: 2,
-          background: "none", border: 0, padding: 0,
-          color: "var(--accent, #e8530e)", cursor: "pointer",
-          fontSize: 11.5, fontWeight: 600,
-        }}
-      >
-        Open {toast.screen ? toast.screen.replace(/_/g, " ") : "details"} →
-      </button>
     </div>
   );
 }
@@ -963,8 +1074,8 @@ function ParentContactBanner({ settings }) {
         .parent-contact-banner {
           position: sticky;
           top: 0;
-          z-index: 30;
-          background: linear-gradient(135deg, var(--brand, #1f3f8b) 0%, var(--accent, #e8530e) 100%);
+          z-index: 40;
+          background: var(--accent);
           color: #fff;
           padding: 8px 18px;
           display: flex;
@@ -997,8 +1108,8 @@ function ParentContactBanner({ settings }) {
           border-radius: 50%;
           display: grid;
           place-items: center;
-          background: rgba(255, 255, 255, 0.92);
-          color: var(--brand, #1f3f8b);
+          background: rgba(255, 255, 255, 0.95);
+          color: var(--accent);
         }
         .parent-contact-banner :global(.parent-contact-label) {
           font-size: 10.5px;
@@ -1051,32 +1162,32 @@ function BrandFooter() {
         .brand-footer-card {
           display: inline-flex;
           align-items: center;
-          gap: 12px;
-          padding: 10px 16px 10px 12px;
+          gap: 10px;
+          padding: 8px 14px 8px 10px;
           border-radius: 999px;
-          background: linear-gradient(135deg, var(--card, #ffffff) 0%, var(--bg-2, #f7f5ee) 100%);
-          border: 1px solid var(--rule, #e9e3d2);
-          box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 18px -10px rgba(31, 63, 139, 0.18);
+          background: var(--card);
+          border: 1px solid var(--rule);
+          box-shadow: var(--shadow-sm);
           text-decoration: none;
-          color: var(--ink-2, #1d2433);
-          transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+          color: var(--ink-2);
+          transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
         }
         .brand-footer-card:hover {
           transform: translateY(-1px);
-          border-color: var(--brand, #1f3f8b);
-          box-shadow: 0 2px 4px rgba(15, 23, 42, 0.05), 0 12px 28px -12px rgba(31, 63, 139, 0.32);
+          border-color: var(--ink-4);
+          box-shadow: var(--shadow-md);
         }
         .brand-footer-card:hover .brand-footer-arrow {
           transform: translate(2px, -2px);
         }
         .brand-footer-mark {
-          width: 30px;
-          height: 30px;
+          width: 26px;
+          height: 26px;
           border-radius: 50%;
           display: grid;
           place-items: center;
-          color: #ffffff;
-          background: linear-gradient(135deg, var(--brand, #1f3f8b) 0%, var(--accent, #e8530e) 100%);
+          color: var(--accent);
+          background: var(--accent-soft);
           flex-shrink: 0;
         }
         .brand-footer-text {
@@ -1089,19 +1200,20 @@ function BrandFooter() {
           font-weight: 600;
           letter-spacing: 0.12em;
           text-transform: uppercase;
-          color: var(--ink-3, #6b6e74);
+          color: var(--ink-4);
         }
         .brand-footer-name {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          font-size: 13.5px;
-          font-weight: 700;
-          color: var(--brand, #1f3f8b);
+          font-size: 13px;
+          font-weight: 600;
+          letter-spacing: -0.015em;
+          color: var(--ink);
           margin-top: 2px;
         }
         .brand-footer-arrow {
-          color: var(--brand, #1f3f8b);
+          color: var(--ink-4);
           transition: transform 0.18s ease;
         }
       `}</style>

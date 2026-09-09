@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../Icon";
 import { resolveSchool, downloadPdf } from "@/lib/export";
-import { KPI, AvatarChip } from "../ui";
+import { KPI, AvatarChip, EmptyState, Funnel, SectionHeader } from "../ui";
 import { formatClassLabel } from "@/lib/format";
 
 const SOURCES = ["Website", "Walk-in", "Referral", "Phone", "Instagram", "Facebook", "Google", "Other"];
@@ -16,14 +16,15 @@ const COLUMNS = [
 
 function Toast({ msg, tone, onClose }) {
   if (!msg) return null;
-  const bg = tone === "ok" ? "var(--ok)" : tone === "err" ? "var(--err, #b13c1c)" : "var(--ink)";
   return (
-    <div onClick={onClose} role="status" style={{
-      position: "fixed", bottom: 18, right: 18, zIndex: 9000,
-      background: bg, color: "#fff", padding: "9px 14px", borderRadius: 8,
-      fontSize: 12, fontWeight: 500, cursor: "pointer", maxWidth: 360,
-      boxShadow: "0 12px 30px -16px rgba(0,0,0,0.35)",
-    }}>{msg}</div>
+    <div className="toast-stack">
+      <div className={`toast ${tone === "err" ? "bad" : "ok"}`} role="status" onClick={onClose} style={{ cursor: "pointer" }}>
+        <span className="toast-ico" aria-hidden="true">
+          <Icon name={tone === "err" ? "x" : "check"} size={12} stroke={2.4} />
+        </span>
+        <div className="toast-title" style={{ flex: 1 }}>{msg}</div>
+      </div>
+    </div>
   );
 }
 
@@ -35,7 +36,7 @@ function ModalShell({ title, sub, onClose, children, width = 480 }) {
   }, [onClose]);
   return (
     <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: width, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
@@ -62,11 +63,20 @@ function Field({ label, children, hint }) {
   );
 }
 
-export default function ScreenEnquiries({ E, refresh, role, session }) {
+export default function ScreenEnquiries({ E, refresh, role, session, searchFocus, clearSearchFocus }) {
   const school = resolveSchool(E?.SETTINGS);
   const actor  = session?.name || null;
   const canEdit = role === "principal" || role === "admin" || role === "academic_director";
   const [showAdd, setShowAdd] = useState(false);
+  // Quick create (top bar / command palette) navigates here and asks the
+  // screen to open the create flow it already owns.
+  useEffect(() => {
+    if (searchFocus?.action !== "create") return;
+    setShowAdd(true);
+    clearSearchFocus?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchFocus]);
+
   const [toast, setToast] = useState(null);
   // Set after a successful "Convert" — shows the parent's login email +
   // generated temp password so the office can hand it to them on the spot.
@@ -203,9 +213,12 @@ export default function ScreenEnquiries({ E, refresh, role, session }) {
     <div className="page">
       <div className="page-head">
         <div>
-          <div className="page-eyebrow">CRM · Admissions</div>
-          <div className="page-title">Admission <span className="amber">enquiries</span></div>
-          <div className="page-sub">Pipeline · source tracking · conversion</div>
+          <div className="page-eyebrow">Admissions</div>
+          <div className="page-title">Admission pipeline</div>
+          <div className="page-sub">
+            Every enquiry from first contact to confirmed admission — move a card forward and the
+            parent record follows automatically.
+          </div>
         </div>
         <div className="page-actions">
           <button className="btn" onClick={exportPdf} disabled={data.length === 0} title="Open a printable, branded PDF report">
@@ -278,24 +291,67 @@ export default function ScreenEnquiries({ E, refresh, role, session }) {
         })()}
       </div>
 
+      {/* Conversion funnel — computed from the same enquiry records the
+          board below renders, so the two can never disagree. */}
+      {data.length > 0 && (
+        <div className="card" style={{ marginBottom: 14 }}>
+          <div className="card-head">
+            <div>
+              <div className="card-title">Conversion funnel</div>
+              <div className="card-sub">
+                {counts.Converted} of {data.length} enquiries converted
+                {data.length > 0 ? ` · ${Math.round((counts.Converted / data.length) * 100)}% conversion rate` : ""}
+              </div>
+            </div>
+          </div>
+          <div className="card-body">
+            <Funnel
+              stages={[
+                { label: "All enquiries", value: data.length },
+                { label: "Contacted",     value: counts.Contacted + counts.Converted },
+                { label: "Converted",     value: counts.Converted },
+              ]}
+            />
+          </div>
+        </div>
+      )}
+
+      <SectionHeader
+        title="Pipeline board"
+        sub="Drag-free — use the arrow on a card to advance it a stage"
+      />
+
       <div className="grid g-12">
         <div className="col-12" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14 }}>
           {COLUMNS.map((col) => {
             const items = data.filter((e) => e.status === col.s);
+            const share = data.length ? Math.round((items.length / data.length) * 100) : 0;
             return (
               <div key={col.s} className="card">
                 <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--rule)" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span className={`chip ${col.tone}`}><span className="dot" />{col.s}</span>
-                    <span className="mono" style={{ marginLeft: "auto", fontSize: 12, color: "var(--ink-3)" }}>{items.length}</span>
+                    <span className="mono" style={{ marginLeft: "auto", fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{items.length}</span>
                   </div>
-                  <div style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 4 }}>{col.desc}</div>
+                  <div style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 5 }}>
+                    {col.desc}{data.length ? ` · ${share}% of pipeline` : ""}
+                  </div>
                 </div>
                 <div style={{ padding: 8, display: "flex", flexDirection: "column", gap: 6, minHeight: 220 }}>
                   {items.length === 0 && (
-                    <div className="empty" style={{ padding: "20px 8px", fontSize: 11.5 }}>
-                      {col.s === "New" ? "Add enquiries to start the pipeline" : `No ${col.s.toLowerCase()} enquiries`}
-                    </div>
+                    <EmptyState
+                      icon={col.s === "New" ? "enquiry" : col.s === "Converted" ? "check" : col.s === "Rejected" ? "x" : "phone"}
+                      title={col.s === "New" ? "No new enquiries" : `Nothing ${col.s.toLowerCase()}`}
+                      body={
+                        col.s === "New"
+                          ? "New enquiries land here first — from the website form, a walk-in or a phone call."
+                          : col.s === "Contacted"
+                            ? "Enquiries you have called or messaged move into this column."
+                            : col.s === "Converted"
+                              ? "Confirmed admissions appear here and a parent login is created automatically."
+                              : "Enquiries that were not a fit are archived here rather than deleted."
+                      }
+                    />
                   )}
                   {items.map((e) => (
                     <EnquiryCard
@@ -718,7 +774,7 @@ function ConvertConfirmModal({ enquiry, onCancel, onConfirm }) {
 
   return (
     <div onClick={onCancel} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16,
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 460 }}>

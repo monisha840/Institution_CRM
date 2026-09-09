@@ -16,7 +16,7 @@ const COMPLAINT_CATEGORIES = [
 ];
 const CATEGORY_BY_KEY = Object.fromEntries(COMPLAINT_CATEGORIES.map((c) => [c.key, c]));
 
-export default function ScreenComplaints({ E, refresh, role, session }) {
+export default function ScreenComplaints({ E, refresh, role, session, searchFocus, clearSearchFocus }) {
   const school = resolveSchool(E?.SETTINGS);
   const actor  = session?.name || null;
   const isParent = role === "parent";
@@ -45,6 +45,15 @@ export default function ScreenComplaints({ E, refresh, role, session }) {
 
   const child = isParent ? (E.ADDED_STUDENTS || [])[0] : null;
   const [showForm, setShowForm] = useState(false);
+  // Quick create (top bar / command palette) navigates here and asks the
+  // screen to open the create flow it already owns.
+  useEffect(() => {
+    if (searchFocus?.action !== "create") return;
+    setShowForm(true);
+    clearSearchFocus?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchFocus]);
+
   const [showStaffLog, setShowStaffLog] = useState(false);
   const students = E.ADDED_STUDENTS || [];
 
@@ -437,7 +446,7 @@ function StaffLogModal({ students, onClose, onSubmit }) {
 
   return (
     <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 560, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
@@ -566,7 +575,7 @@ function NewTicketModal({ child, onClose, onSubmit }) {
 
   return (
     <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16,
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 520 }}>

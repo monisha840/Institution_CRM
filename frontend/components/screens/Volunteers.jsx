@@ -60,7 +60,7 @@ function ModalShell({ title, sub, onClose, children, width = 520 }) {
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)", display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto" }}>
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "var(--overlay)", display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto" }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: width, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
         <div className="card-head">
           <div><div className="card-title">{title}</div>{sub && <div className="card-sub">{sub}</div>}</div>
@@ -82,10 +82,19 @@ function Field({ label, children, hint }) {
   );
 }
 
-export default function ScreenVolunteers({ E, refresh, role }) {
+export default function ScreenVolunteers({ E, refresh, role, searchFocus, clearSearchFocus }) {
   const canEdit = role === "admin" || role === "principal";
   const [volunteers, setVolunteers] = useState([]);
   const [showAdd, setShowAdd] = useState(false);
+  // Quick create (top bar / command palette) navigates here and asks the
+  // screen to open the create flow it already owns.
+  useEffect(() => {
+    if (searchFocus?.action !== "create") return;
+    setShowAdd(true);
+    clearSearchFocus?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchFocus]);
+
   const [logFor, setLogFor] = useState(null);
   const [toast, setToast] = useState(null);
 

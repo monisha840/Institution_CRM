@@ -71,6 +71,20 @@ const PATHS = {
   users: <><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-3.5 3.3-6 6.5-6s6 2.5 6.5 6"/><circle cx="17" cy="10" r="2.5"/><path d="M15 14.5c1.8-.5 4.5.5 5.5 3"/></>,
   audit: <><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/><circle cx="17" cy="17" r="2.5"/></>,
   menu: <><path d="M4 6h16M4 12h16M4 18h16"/></>,
+  // --- shell + design-system additions ---
+  chevronLeft: <><path d="M15 6l-6 6 6 6"/></>,
+  chevronUp: <><path d="M6 15l6-6 6 6"/></>,
+  command: <><path d="M6 3a3 3 0 0 1 3 3v12a3 3 0 1 1-3-3h12a3 3 0 1 1-3 3V6a3 3 0 1 1 3 3H6a3 3 0 0 1 0-6z"/></>,
+  logout: <><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M10 17l-5-5 5-5M5 12h11"/></>,
+  panelLeft: <><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M10 4v16"/></>,
+  trash: <><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></>,
+  eye: <><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></>,
+  inbox: <><path d="M3 12h5l2 3h4l2-3h5"/><path d="M5 5h14l3 7v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-6z"/></>,
+  layers: <><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/></>,
+  sort: <><path d="M7 4v16M7 20l-3-3M7 4l3 3"/><path d="M17 20V4M17 4l3 3M17 20l-3-3"/></>,
+  arrowUpRight: <><path d="M7 17L17 7M9 7h8v8"/></>,
+  minus: <><path d="M5 12h14"/></>,
+  info: <><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></>,
 };
 
 export default function Icon({ name, size = 16, stroke = 1.5, className = "", style }) {

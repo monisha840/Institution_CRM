@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../Icon";
-import { KPI, AvatarChip } from "../ui";
+import { KPI, AvatarChip, SkeletonTable, EmptyState } from "../ui";
 import { formatClassLabel, getWorkingDays, getHolidayDates, attendanceFromLogs } from "@/backend/lib/format.js";
 
 function Toast({ msg, tone, onClose }) {
@@ -248,22 +248,20 @@ export default function ScreenAttendance({ E, refresh, role, session }) {
               { k: "history",  label: "View history" },
             ];
         return (
-          <div className="card" style={{ marginBottom: 14, padding: "10px 14px", display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
-            <span style={{ fontSize: 11, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 500, marginRight: 4 }}>
-              {canMarkTeachers ? "Take attendance for:" : "Attendance:"}
+          <div className="card" style={{ marginBottom: 14, padding: "10px 14px", display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+            <span className="mstrip-lbl" style={{ marginTop: 0, whiteSpace: "nowrap" }}>
+              {canMarkTeachers ? "Take attendance for" : "Attendance"}
             </span>
-            {tabs.map((t) => (
-              <button
-                key={t.k}
-                onClick={() => setMode(t.k)}
-                style={{
-                  padding: "6px 14px", borderRadius: 999,
-                  background: mode === t.k ? "var(--accent)" : "var(--bg-2)",
-                  color: mode === t.k ? "#fff" : "var(--ink-2)",
-                  border: 0, cursor: "pointer", fontSize: 12.5, fontWeight: 500,
-                }}
-              >{t.label}</button>
-            ))}
+            <div className="segmented">
+              {tabs.map((t) => (
+                <button
+                  key={t.k}
+                  type="button"
+                  className={mode === t.k ? "active" : ""}
+                  onClick={() => setMode(t.k)}
+                >{t.label}</button>
+              ))}
+            </div>
           </div>
         );
       })()}
@@ -335,22 +333,20 @@ export default function ScreenAttendance({ E, refresh, role, session }) {
           </span>
         </div>
       ) : (
-        <div className="card" style={{ marginBottom: 14, padding: "12px 16px", display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-          <span style={{ fontSize: 11.5, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.06em", marginRight: 4 }}>Class</span>
-          {(E.CLASSES || []).map((c) => (
-            <button
-              key={c.n}
-              onClick={() => setCls(c.n)}
-              className="btn sm"
-              style={{
-                background: cls === c.n ? "var(--ink)" : "var(--card)",
-                color: cls === c.n ? "var(--bg)" : "var(--ink-2)",
-                borderColor: cls === c.n ? "var(--ink)" : "var(--rule)",
-              }}
-            >
-              {c.label || formatClassLabel(String(c.n))}
-            </button>
-          ))}
+        <div className="card" style={{ marginBottom: 14, padding: "12px 16px", display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <span className="mstrip-lbl" style={{ marginTop: 0, whiteSpace: "nowrap" }}>Class</span>
+          <div className="segmented">
+            {(E.CLASSES || []).map((c) => (
+              <button
+                key={c.n}
+                type="button"
+                className={cls === c.n ? "active" : ""}
+                onClick={() => setCls(c.n)}
+              >
+                {c.label || formatClassLabel(String(c.n))}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -625,7 +621,7 @@ function TeacherAttendancePanel({ E, today, todayLabel, refresh, showToast }) {
     finally { setBusy(false); }
   }
 
-  if (loading) return <div className="card empty">Loading teachers…</div>;
+  if (loading) return <div className="card"><SkeletonTable rows={5} cols={4} /></div>;
   if (teachers.length === 0) return <div className="card empty">No teachers yet — add staff with role <b>Teacher</b> from the Staff screen.</div>;
 
   return (
@@ -1018,12 +1014,7 @@ function CorrectPastAttendancePanel({ E, todayIso, refresh, showToast }) {
               <button
                 key={c.n}
                 onClick={() => setCls(c.n)}
-                className="btn sm"
-                style={{
-                  background: cls === c.n ? "var(--ink)" : "var(--card)",
-                  color: cls === c.n ? "var(--bg)" : "var(--ink-2)",
-                  borderColor: cls === c.n ? "var(--ink)" : "var(--rule)",
-                }}
+                className={`btn sm ${cls === c.n ? "accent" : ""}`}
               >{c.label || formatClassLabel(String(c.n))}</button>
             ))}
           </div>
@@ -1038,12 +1029,7 @@ function CorrectPastAttendancePanel({ E, todayIso, refresh, showToast }) {
                 <button
                   key={s}
                   onClick={() => setSec(s)}
-                  className="btn sm"
-                  style={{
-                    background: sec === s ? "var(--ink)" : "var(--card)",
-                    color: sec === s ? "var(--bg)" : "var(--ink-2)",
-                    borderColor: sec === s ? "var(--ink)" : "var(--rule)",
-                  }}
+                  className={`btn sm ${sec === s ? "accent" : ""}`}
                 >{s}</button>
               ));
             })()}
@@ -1319,12 +1305,7 @@ function AttendanceHistoryPanel({ E, role, isTeacher, todayIso, teacherClassList
               <button
                 key={k}
                 onClick={() => setClassKey(k)}
-                className="btn sm"
-                style={{
-                  background: classKey === k ? "var(--ink)" : "var(--card)",
-                  color: classKey === k ? "var(--bg)" : "var(--ink-2)",
-                  borderColor: classKey === k ? "var(--ink)" : "var(--rule)",
-                }}
+                className={`btn sm ${classKey === k ? "accent" : ""}`}
               >{formatClassLabel(k)}</button>
             ))}
           </div>

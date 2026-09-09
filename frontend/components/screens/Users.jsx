@@ -905,7 +905,7 @@ function AddUserModal({ customRoles = [], onClose, onCreated }) {
 
   return (
     <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: 480, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
@@ -1027,7 +1027,7 @@ function BulkParentLoginsModal({ logins, onClose, flash }) {
     <div
       onClick={onClose}
       style={{
-        position: "fixed", inset: 0, background: "rgba(20,16,10,0.55)",
+        position: "fixed", inset: 0, background: "var(--overlay)",
         display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
       }}
     >

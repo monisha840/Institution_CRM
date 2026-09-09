@@ -52,7 +52,7 @@ function ModalShell({ title, sub, onClose, children, width = 480 }) {
   }, [onClose]);
   return (
     <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: width, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
@@ -79,7 +79,7 @@ function Field({ label, children, hint }) {
   );
 }
 
-export default function ScreenMoney({ E, refresh, role }) {
+export default function ScreenMoney({ E, refresh, role, searchFocus, clearSearchFocus }) {
   // Who can add / edit / remove expenses on this screen:
   //   - admin, principal                          — always allowed (top of the org)
   //   - school_accountant, trust_accountant       — finance is literally their role
@@ -137,6 +137,15 @@ export default function ScreenMoney({ E, refresh, role }) {
   const [methodFilter, setMethodFilter] = useState("All");
   const [spentFilter, setSpentFilter] = useState("All");          // All | Manual | Inventory
   const [showAddExpense, setShowAddExpense] = useState(false);
+  // Quick create (top bar / command palette) navigates here and asks the
+  // screen to open the create flow it already owns.
+  useEffect(() => {
+    if (searchFocus?.action !== "create") return;
+    setShowAddExpense(true);
+    clearSearchFocus?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchFocus]);
+
   // When a template tile is clicked, we pre-fill the Add Expense modal
   // with the template's defaults. `null` means a fresh blank modal.
   const [expensePrefill, setExpensePrefill] = useState(null);

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Icon from "../Icon";
-import { KPI } from "../ui";
+import { KPI, EmptyState } from "../ui";
 import { resolveSchool, downloadPdf } from "@/lib/export";
 
 // Canonical category list — driven by the spec ("Registration · Affiliation
@@ -428,7 +428,11 @@ export default function ScreenGovernmentDocuments({ E, role, session, refresh })
           </div>
         </div>
         {filtered.length === 0 ? (
-          <div className="empty" style={{ padding: 36 }}>No documents match the filters.</div>
+          <EmptyState
+            icon="reports"
+            title="No documents match these filters"
+            body="Clear the filters, or upload the certificate or licence you are looking for so its expiry is tracked."
+          />
         ) : (
           <div>
             {paged.map((d) => {

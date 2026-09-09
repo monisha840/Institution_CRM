@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Icon from "../Icon";
-import { KPI, BarChart, LineBarChart, Ring, AvatarChip } from "../ui";
+import { KPI, BarChart, LineBarChart, Ring, AvatarChip, EmptyState } from "../ui";
 import QuickAccessRecent from "../QuickAccessRecent";
 import AttendanceTodayCard from "../AttendanceTodayCard";
 import { money, moneyK, formatClassLabel, feeTypeLabel, getWorkingDays, getHolidayDates, attendanceFromLogs } from "@/lib/format";
@@ -147,9 +147,7 @@ export default function ScreenDashboard({ E, role, session, refresh, setCurrent,
             {greet}, <span className="amber">{firstName}</span>.
           </div>
           <div className="page-sub">
-            {isParent
-              ? "Your child's fees, attendance, and transport — all in one place."
-              : "Your operating snapshot — fees, attendance, transport."}
+            Here&rsquo;s what&rsquo;s happening across the school today — collection, attendance and transport at a glance.
           </div>
         </div>
       </div>
@@ -180,7 +178,8 @@ export default function ScreenDashboard({ E, role, session, refresh, setCurrent,
         return (
           <div className="grid g-4" style={{ marginBottom: 20 }}>
             <KPI
-              label="Students" value={studentCount} sub="on roll"
+              label="Students on roll" value={studentCount.toLocaleString("en-IN")}
+              sub={studentCount ? `across ${Object.keys(studentsByClass).length} class${Object.keys(studentsByClass).length === 1 ? "" : "es"}` : "no students added yet"}
               puck="mint" puckIcon="students"
               details={{
                 title: `Students · ${studentCount} on roll`,
@@ -192,9 +191,11 @@ export default function ScreenDashboard({ E, role, session, refresh, setCurrent,
             />
             <KPI
               label="Fees collected" value={moneyK(collected)}
+              progress={totalExpected > 0 ? pctCollected : undefined}
+              progressTone={pctCollected >= 75 ? "ok" : pctCollected >= 40 ? "warn" : undefined}
               sub={
                 totalExpected > 0
-                  ? `of ${moneyK(totalExpected)} total · ${moneyK(pendingTotal)} pending · ${pctCollected}% collected`
+                  ? `${pctCollected}% of ${moneyK(totalExpected)} raised · ${moneyK(pendingTotal)} outstanding`
                   : "no fees raised yet"
               }
               puck="peach" puckIcon="fees"
@@ -210,9 +211,9 @@ export default function ScreenDashboard({ E, role, session, refresh, setCurrent,
               }}
             />
             <KPI
-              label="Student attendance"
+              label="Attendance today"
               value={attPct != null ? `${attPct}%` : "—"}
-              sub={attMarked ? `${attPresent}/${attMarked} present today` : "not marked yet"}
+              sub={attMarked ? `${attPresent} of ${attMarked} marked present` : "register not marked yet"}
               puck="cream" puckIcon="check"
               details={{
                 title: `Attendance today · ${attPresent}/${attMarked} present`,
@@ -224,8 +225,12 @@ export default function ScreenDashboard({ E, role, session, refresh, setCurrent,
               }}
             />
             <KPI
-              label="Buses" value={(E.ROUTES || []).length || 0}
-              sub={(E.ROUTES || []).length ? "running" : "no routes"}
+              label="Transport" value={(E.ROUTES || []).length || 0}
+              sub={
+                (E.ROUTES || []).length
+                  ? `${(E.ROUTES || []).filter((r) => r.status === "running").length} running now · ${(E.ROUTES || []).length} route${(E.ROUTES || []).length === 1 ? "" : "s"}`
+                  : "no routes configured"
+              }
               puck="sky" puckIcon="bus"
               details={{
                 title: `Transport · ${(E.ROUTES || []).length} bus${(E.ROUTES || []).length === 1 ? "" : "es"}`,
@@ -251,49 +256,53 @@ export default function ScreenDashboard({ E, role, session, refresh, setCurrent,
         <div className="card col-12">
           <div className="card-head">
             <div>
-              <div className="card-title">Money coming in, money going out</div>
-              <div className="card-sub">Weekly · lakhs · April YTD</div>
+              <div className="card-title">Cash pulse</div>
+              <div className="card-sub">Money in against money out · weekly · figures in lakhs</div>
             </div>
             <div className="card-actions">
-              <span className="chip accent">
-                <span className="dot" />
-                Income
-              </span>
-              <span className="chip">
-                <span className="dot" />
-                Expense
-              </span>
+              <div className="chart-legend">
+                <span className="lg"><i style={{ background: "var(--accent)" }} />Income</span>
+                <span className="lg"><i style={{ background: "var(--rule-2)" }} />Expense</span>
+              </div>
             </div>
           </div>
           <div className="card-body" style={{ padding: "10px 14px 14px" }}>
-            <LineBarChart data={INCOME_SERIES} w={760} h={240} lineKeys={["inc"]} barKey="exp" palette={["var(--accent)"]} />
+            <LineBarChart
+              data={INCOME_SERIES}
+              h={240}
+              lineKeys={["inc"]}
+              barKey="exp"
+              xKey="w"
+              labels={{ inc: "Income", exp: "Expense" }}
+              palette={["var(--accent)"]}
+            />
             {(() => {
               const incomeYtd = (RECENT_FEES || []).reduce((a, f) => a + (f.amount || 0), 0);
               const expenseYtd = 0;
               const surplus = incomeYtd - expenseYtd;
               const margin = incomeYtd > 0 ? Math.round((surplus / incomeYtd) * 100) : 0;
               return (
-                <div style={{ display: "flex", gap: 28, paddingTop: 14, borderTop: "1px solid var(--rule-2)", marginTop: 8, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: 32, paddingTop: 16, borderTop: "1px solid var(--rule-2)", marginTop: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
                   <div>
-                    <div style={{ fontSize: 10.5, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 500 }}>Income YTD</div>
-                    <div style={{ fontFamily: "var(--font-serif)", fontSize: 24, marginTop: 4, letterSpacing: "-0.02em" }}>{moneyK(incomeYtd)}</div>
-                    <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{(RECENT_FEES || []).length} fee receipt{(RECENT_FEES || []).length === 1 ? "" : "s"}</div>
+                    <div className="mstrip-lbl" style={{ marginTop: 0 }}>Income YTD</div>
+                    <div className="mstrip-val" style={{ marginTop: 5 }}>{moneyK(incomeYtd)}</div>
+                    <div className="mstrip-sub">{(RECENT_FEES || []).length} fee receipt{(RECENT_FEES || []).length === 1 ? "" : "s"}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 10.5, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 500 }}>Expense YTD</div>
-                    <div style={{ fontFamily: "var(--font-serif)", fontSize: 24, marginTop: 4, letterSpacing: "-0.02em" }}>{moneyK(expenseYtd)}</div>
-                    <div style={{ fontSize: 11, color: "var(--ink-3)" }}>not tracked yet</div>
+                    <div className="mstrip-lbl" style={{ marginTop: 0 }}>Expense YTD</div>
+                    <div className="mstrip-val" style={{ marginTop: 5 }}>{moneyK(expenseYtd)}</div>
+                    <div className="mstrip-sub">not tracked on this screen</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 10.5, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 500 }}>Net surplus</div>
-                    <div style={{ fontFamily: "var(--font-serif)", fontSize: 24, marginTop: 4, letterSpacing: "-0.02em", color: "var(--ok)" }}>
+                    <div className="mstrip-lbl" style={{ marginTop: 0 }}>Net surplus</div>
+                    <div className="mstrip-val" style={{ marginTop: 5, color: surplus >= 0 ? "var(--ok)" : "var(--bad)" }}>
                       {moneyK(surplus)}
                     </div>
-                    <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{incomeYtd > 0 ? `${margin}% margin` : "no income yet"}</div>
+                    <div className="mstrip-sub">{incomeYtd > 0 ? `${margin}% margin` : "no income yet"}</div>
                   </div>
-                  <div style={{ marginLeft: "auto", alignSelf: "center" }}>
-                    <button className="btn sm">
-                      <Icon name="link" size={12} />
+                  <div style={{ marginLeft: "auto" }}>
+                    <button className="btn sm" onClick={() => setCurrent("money")}>
+                      <Icon name="arrowUpRight" size={12} />
                       Open ledger
                     </button>
                   </div>
@@ -420,7 +429,11 @@ export default function ScreenDashboard({ E, role, session, refresh, setCurrent,
           </div>
           <div>
             {ROUTES.length === 0 && (
-              <div className="empty">No transport routes yet.</div>
+              <EmptyState
+                icon="bus"
+                title="No routes configured"
+                body="Add a bus route in Transport to see live boarding counts here every morning."
+              />
             )}
             {ROUTES.map((r) => {
               const boarded = r.stops.reduce((a, s) => a + s.boarded, 0);
@@ -537,7 +550,13 @@ export default function ScreenDashboard({ E, role, session, refresh, setCurrent,
             </thead>
             <tbody>
               {RECENT_FEES.length === 0 && (
-                <tr><td colSpan={4} className="empty">No fees collected yet.</td></tr>
+                <tr><td colSpan={4} style={{ padding: 0 }}>
+                  <EmptyState
+                    icon="fees"
+                    title="No fees collected yet"
+                    body="Receipts appear here the moment a payment is recorded on the Fees screen."
+                  />
+                </td></tr>
               )}
               {RECENT_FEES.slice(0, 6).map((f) => (
                 <tr key={f.id}>
@@ -582,7 +601,13 @@ export default function ScreenDashboard({ E, role, session, refresh, setCurrent,
             </thead>
             <tbody>
               {PENDING_FEES.length === 0 && (
-                <tr><td colSpan={3} className="empty">No pending fees.</td></tr>
+                <tr><td colSpan={3} style={{ padding: 0 }}>
+                  <EmptyState
+                    icon="check"
+                    title="Nothing outstanding"
+                    body="Every raised fee has been settled. New dues will show up here as they fall due."
+                  />
+                </td></tr>
               )}
               {PENDING_FEES.map((f) => (
                 <tr key={f.id}>
@@ -616,13 +641,17 @@ export default function ScreenDashboard({ E, role, session, refresh, setCurrent,
         <div className="card col-3">
           <div className="card-head">
             <div>
-              <div className="card-title">Activity</div>
-              <div className="card-sub">Live · audit trail</div>
+              <div className="card-title">Recent activity</div>
+              <div className="card-sub">Live audit trail across the workspace</div>
             </div>
           </div>
           <div className="activity">
             {ACTIVITIES.length === 0 && (
-              <div className="empty">No activity yet.</div>
+              <EmptyState
+                icon="zap"
+                title="Nothing has happened yet"
+                body="Fee receipts, admissions, complaints and stock movements land here the moment they are recorded."
+              />
             )}
             {ACTIVITIES.slice(0, 7).map((a, i) => (
               <div key={i} className="act-item">

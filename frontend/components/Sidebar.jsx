@@ -552,17 +552,24 @@ export default function Sidebar({ current, setCurrent, role, user, permissions, 
                   {group.items.map((it) => {
                     const active = current === it.id;
                     return (
-                      <div key={it.id} className={`side-item ${active ? "active" : ""}`} onClick={() => setCurrent(it.id)}>
+                      <button
+                        key={it.id}
+                        type="button"
+                        className={`side-item ${active ? "active" : ""}`}
+                        onClick={() => setCurrent(it.id)}
+                        aria-current={active ? "page" : undefined}
+                        title={it.label}
+                      >
                         <Icon name={it.icon} size={16} className="side-icon" />
                         <span className="side-lbl">{it.label}</span>
                         {it.live && (
-                          <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 4, color: "var(--ok)", fontSize: 10.5, fontWeight: 500 }}>
+                          <span style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: 4, color: "var(--ok)", fontSize: 10.5, fontWeight: 550 }}>
                             <span className="pulse-dot" />
                             Live
                           </span>
                         )}
                         {it.badge && <span className={`side-badge ${it.badgeAlert ? "alert" : ""}`}>{it.badge}</span>}
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -631,13 +638,21 @@ export default function Sidebar({ current, setCurrent, role, user, permissions, 
           color: var(--accent);
         }
       `}</style>
-      <div className="side-foot">
+      {/* Identity block. Opens the existing My account screen — the same
+          destination the top-bar user menu uses. */}
+      <button
+        type="button"
+        className="side-foot"
+        onClick={() => setCurrent("account")}
+        title={`${displayName} · ${ROLE_LABEL[role] || role} — open my account`}
+      >
         <AvatarChip initials={initialsOf(displayName)} />
         <div style={{ minWidth: 0, flex: 1 }} className="side-lbl">
-          <div style={{ fontSize: 13, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{displayName}</div>
-          <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{ROLE_LABEL[role] || role}</div>
+          <div className="side-foot-name" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{displayName}</div>
+          <div className="side-foot-role">{ROLE_LABEL[role] || role}</div>
         </div>
-      </div>
+        <Icon name="chevronRight" size={13} className="side-foot-chev" />
+      </button>
     </aside>
   );
 }

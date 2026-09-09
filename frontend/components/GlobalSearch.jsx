@@ -103,10 +103,57 @@ function scoreMatch(item, q) {
   return s;
 }
 
-export default function GlobalSearch({ E, role, setCurrent, onPickItem, placeholder }) {
+
+// Recently opened records, per browser. Purely a client-side convenience —
+// nothing is sent anywhere, and the list is capped so it stays scannable.
+const RECENTS_KEY = "sirahcrm.search.recents";
+const RECENTS_MAX = 5;
+
+function readRecents() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(RECENTS_KEY) || "[]");
+    return Array.isArray(raw) ? raw.slice(0, RECENTS_MAX) : [];
+  } catch { return []; }
+}
+
+function pushRecent(item) {
+  try {
+    const next = [
+      { type: item.type, id: item.id, title: item.title, sub: item.sub },
+      ...readRecents().filter((r) => !(r.type === item.type && r.id === item.id)),
+    ].slice(0, RECENTS_MAX);
+    localStorage.setItem(RECENTS_KEY, JSON.stringify(next));
+  } catch {}
+}
+
+// Result row — shared by recents and live matches so both read identically.
+function ResultRow({ item, meta, active, onHover, onPick }) {
+  return (
+    <button
+      type="button"
+      className={`gs-row ${active ? "active" : ""}`}
+      onMouseEnter={onHover}
+      onClick={onPick}
+      role="option"
+      aria-selected={active}
+    >
+      <span className="gs-ico" aria-hidden="true">
+        <Icon name={meta.icon || "search"} size={13} />
+      </span>
+      <span className="gs-text">
+        <span className="gs-title">{item.title}</span>
+        {item.sub ? <span className="gs-sub">{item.sub}</span> : null}
+      </span>
+      <span className="gs-type">{meta.label || item.type}</span>
+    </button>
+  );
+}
+
+export default function GlobalSearch({ E, role, setCurrent, onPickItem, placeholder, modKey = "Ctrl ", quickActions = [] }) {
   const [open, setOpen]   = useState(false);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
+  const [recents, setRecents] = useState([]);
   const wrapRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -121,7 +168,19 @@ export default function GlobalSearch({ E, role, setCurrent, onPickItem, placehol
       .map((x) => x.it);
   }, [index, query]);
 
+  // Recents are read on open so a record opened elsewhere this session is
+  // already in the list the next time the palette appears.
+  useEffect(() => { if (open) setRecents(readRecents()); }, [open]);
   useEffect(() => { setActive(0); }, [query]);
+
+  const searching = Boolean(query.trim());
+  // One flat keyboard list across whichever sections are on screen.
+  const rows = searching
+    ? results.map((it) => ({ kind: "result", it }))
+    : [
+        ...recents.map((it) => ({ kind: "result", it })),
+        ...quickActions.map((a) => ({ kind: "action", a })),
+      ];
 
   // Close on outside click
   useEffect(() => {
@@ -133,8 +192,9 @@ export default function GlobalSearch({ E, role, setCurrent, onPickItem, placehol
     return () => document.removeEventListener("mousedown", onClick);
   }, [open]);
 
-  // Cmd/Ctrl+F focuses the input (preventing browser find — appropriate for an
-  // app like this where global app-search is the primary expectation)
+  // Cmd/Ctrl+F focuses the palette (preventing browser find — appropriate
+  // for an app where in-app search is the primary expectation). Cmd/Ctrl+K
+  // is deliberately left alone: it already opens the display-settings panel.
   useEffect(() => {
     const onKey = (e) => {
       if ((e.metaKey || e.ctrlKey) && (e.key === "f" || e.key === "F")) {
@@ -152,9 +212,10 @@ export default function GlobalSearch({ E, role, setCurrent, onPickItem, placehol
 
   function pick(it) {
     const meta = TYPE_META[it.type];
-    // Prefer the deep-linking callback when supplied — it both navigates
-    // AND passes the focus (type + id) so the destination screen can open
-    // the relevant detail (e.g. ProfileModal for a student).
+    pushRecent(it);
+    // Prefer the deep-linking callback when supplied — it both navigates AND
+    // passes the focus (type + id) so the destination screen can open the
+    // relevant detail (e.g. ProfileModal for a student).
     if (onPickItem) {
       onPickItem({ screen: meta?.screen, type: it.type, id: it.id, title: it.title });
     } else if (meta?.screen && setCurrent) {
@@ -164,15 +225,23 @@ export default function GlobalSearch({ E, role, setCurrent, onPickItem, placehol
     setQuery("");
   }
 
-  function onInputKey(e) {
-    if (!open) return;
-    if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => Math.min(results.length - 1, a + 1)); }
-    if (e.key === "ArrowUp")   { e.preventDefault(); setActive((a) => Math.max(0, a - 1)); }
-    if (e.key === "Enter" && results[active]) { e.preventDefault(); pick(results[active]); }
+  function runRow(row) {
+    if (!row) return;
+    if (row.kind === "action") { setOpen(false); setQuery(""); row.a.onSelect?.(); }
+    else pick(row.it);
   }
 
+  function onInputKey(e) {
+    if (!open) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => Math.min(rows.length - 1, a + 1)); }
+    if (e.key === "ArrowUp")   { e.preventDefault(); setActive((a) => Math.max(0, a - 1)); }
+    if (e.key === "Enter")     { e.preventDefault(); runRow(rows[active]); }
+  }
+
+  const recentCount = searching ? 0 : recents.length;
+
   return (
-    <div ref={wrapRef} className="topbar-search" style={{ position: "relative" }}>
+    <div ref={wrapRef} className="topbar-search" style={{ position: "relative" }} onClick={() => inputRef.current?.focus()}>
       <Icon name="search" size={14} />
       <input
         ref={inputRef}
@@ -181,74 +250,205 @@ export default function GlobalSearch({ E, role, setCurrent, onPickItem, placehol
         onFocus={() => setOpen(true)}
         onKeyDown={onInputKey}
         placeholder={placeholder}
+        role="combobox"
+        aria-expanded={open}
+        aria-controls="global-search-results"
+        aria-autocomplete="list"
       />
+      {!open && <span className="kbd">{modKey}F</span>}
 
-      {open && query.trim() && (
-        <div
-          style={{
-            position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0,
-            background: "var(--card)", border: "1px solid var(--rule)",
-            borderRadius: 12, padding: 4, zIndex: 200, maxHeight: 420, overflowY: "auto",
-            boxShadow: "var(--shadow-lg)",
-          }}
-        >
-          {results.length === 0 ? (
-            <div style={{ padding: "16px 14px", fontSize: 12, color: "var(--ink-3)" }}>
-              No matches for <b style={{ color: "var(--ink)" }}>“{query}”</b>. Try a name, id, class, status, vendor, or activity.
-              <div style={{ fontSize: 10.5, color: "var(--ink-4)", marginTop: 6 }}>
-                Indexed: {index.length.toLocaleString("en-IN")} item{index.length === 1 ? "" : "s"} from your role's data
-              </div>
-            </div>
-          ) : (
-            results.map((it, i) => {
-              const meta = TYPE_META[it.type] || {};
-              const isActive = i === active;
-              return (
-                <div
-                  key={`${it.type}-${it.id}-${i}`}
-                  onMouseEnter={() => setActive(i)}
-                  onClick={() => pick(it)}
-                  style={{
-                    display: "flex", gap: 10, alignItems: "center",
-                    padding: "8px 10px", borderRadius: 8, cursor: "pointer",
-                    background: isActive ? "var(--bg-2)" : "transparent",
-                  }}
-                >
-                  <span style={{
-                    width: 28, height: 28, borderRadius: 7,
-                    background: "var(--bg-2)", color: "var(--ink-3)",
-                    display: "grid", placeItems: "center", flexShrink: 0,
-                  }}>
-                    <Icon name={meta.icon || "search"} size={13} />
-                  </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {it.title}
-                    </div>
-                    <div style={{ fontSize: 11, color: "var(--ink-3)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {it.sub}
-                    </div>
-                  </div>
-                  <span style={{
-                    fontSize: 10, padding: "2px 7px", borderRadius: 5,
-                    background: "var(--bg-2)", color: "var(--ink-3)",
-                    textTransform: "uppercase", letterSpacing: 0.5, fontWeight: 500,
-                    flexShrink: 0,
-                  }}>{meta.label || it.type}</span>
+      {open && (
+        <div className="gs-panel" id="global-search-results" role="listbox">
+          {/* Nothing typed yet: recents plus the same quick-create actions the
+              top bar offers, so the palette is useful before the first keystroke. */}
+          {!searching && (
+            <>
+              {recents.length > 0 && (
+                <>
+                  <div className="gs-label">Recent</div>
+                  {recents.map((it, i) => (
+                    <ResultRow
+                      key={`r-${it.type}-${it.id}-${i}`}
+                      item={it}
+                      meta={TYPE_META[it.type] || {}}
+                      active={active === i}
+                      onHover={() => setActive(i)}
+                      onPick={() => pick(it)}
+                    />
+                  ))}
+                </>
+              )}
+              {quickActions.length > 0 && (
+                <>
+                  <div className="gs-label">Quick actions</div>
+                  {quickActions.map((a, i) => {
+                    const idx = recentCount + i;
+                    return (
+                      <button
+                        type="button"
+                        key={a.id}
+                        className={`gs-row ${active === idx ? "active" : ""}`}
+                        onMouseEnter={() => setActive(idx)}
+                        onClick={() => runRow({ kind: "action", a })}
+                        role="option"
+                        aria-selected={active === idx}
+                      >
+                        <span className="gs-ico" aria-hidden="true"><Icon name="plus" size={13} /></span>
+                        <span className="gs-text">
+                          <span className="gs-title">Create {a.label.toLowerCase()}</span>
+                        </span>
+                        <span className="gs-type">Action</span>
+                      </button>
+                    );
+                  })}
+                </>
+              )}
+              {recents.length === 0 && quickActions.length === 0 && (
+                <div className="gs-hint">
+                  Start typing to search across {index.length.toLocaleString("en-IN")} record
+                  {index.length === 1 ? "" : "s"} you have access to.
                 </div>
-              );
-            })
+              )}
+            </>
           )}
-          <div style={{
-            display: "flex", justifyContent: "space-between", padding: "8px 10px 4px",
-            borderTop: "1px dashed var(--rule)", marginTop: 4,
-            fontSize: 10.5, color: "var(--ink-4)",
-          }}>
-            <span>{results.length ? `${results.length} match${results.length === 1 ? "" : "es"}` : "Type to search"}</span>
-            <span>↑↓ navigate · ↵ open · esc close</span>
+
+          {searching && results.length === 0 && (
+            <div className="gs-hint">
+              No matches for <b style={{ color: "var(--ink)" }}>&ldquo;{query}&rdquo;</b>.
+              <div style={{ marginTop: 4 }}>Try a name, an id, a class, a status, a vendor or an activity.</div>
+            </div>
+          )}
+
+          {searching && results.map((it, i) => (
+            <ResultRow
+              key={`${it.type}-${it.id}-${i}`}
+              item={it}
+              meta={TYPE_META[it.type] || {}}
+              active={active === i}
+              onHover={() => setActive(i)}
+              onPick={() => pick(it)}
+            />
+          ))}
+
+          <div className="gs-foot">
+            <span>
+              {searching
+                ? `${results.length} match${results.length === 1 ? "" : "es"}`
+                : `${index.length.toLocaleString("en-IN")} records indexed`}
+            </span>
+            <span className="gs-keys">
+              <span className="kbd">&uarr;&darr;</span> navigate
+              <span className="kbd">&crarr;</span> open
+              <span className="kbd">esc</span> close
+            </span>
           </div>
         </div>
       )}
+
+      <style jsx>{`
+        .gs-panel {
+          position: absolute;
+          top: calc(100% + 6px);
+          left: 0;
+          right: 0;
+          min-width: 320px;
+          background: var(--card);
+          border: 1px solid var(--rule);
+          border-radius: var(--radius);
+          box-shadow: var(--shadow-lg);
+          padding: 5px;
+          z-index: 200;
+          max-height: 440px;
+          overflow-y: auto;
+          animation: gs-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes gs-in {
+          from { opacity: 0; transform: translateY(-4px); }
+          to   { opacity: 1; transform: none; }
+        }
+        .gs-label {
+          padding: 8px 10px 5px;
+          font-size: 10px;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          color: var(--ink-4);
+          font-weight: 600;
+        }
+        .gs-panel :global(.gs-row) {
+          width: 100%;
+          display: flex;
+          gap: 10px;
+          align-items: center;
+          padding: 8px 10px;
+          border-radius: var(--radius-xs);
+          text-align: left;
+          transition: background 120ms ease;
+        }
+        .gs-panel :global(.gs-row.active) { background: var(--card-2); }
+        .gs-panel :global(.gs-ico) {
+          width: 26px;
+          height: 26px;
+          border-radius: var(--radius-xs);
+          background: var(--bg-2);
+          color: var(--ink-3);
+          display: grid;
+          place-items: center;
+          flex-shrink: 0;
+        }
+        .gs-panel :global(.gs-row.active .gs-ico) { background: var(--accent-soft); color: var(--accent); }
+        .gs-panel :global(.gs-text) { flex: 1; min-width: 0; display: block; }
+        .gs-panel :global(.gs-title) {
+          display: block;
+          font-size: 13px;
+          font-weight: 500;
+          color: var(--ink);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .gs-panel :global(.gs-sub) {
+          display: block;
+          font-size: 11px;
+          color: var(--ink-3);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          margin-top: 1px;
+        }
+        .gs-panel :global(.gs-type) {
+          font-size: 10px;
+          padding: 2px 7px;
+          border-radius: 999px;
+          background: var(--bg-2);
+          color: var(--ink-3);
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          font-weight: 600;
+          flex-shrink: 0;
+        }
+        .gs-hint {
+          padding: 16px 12px;
+          font-size: 12.5px;
+          color: var(--ink-3);
+          line-height: 1.55;
+        }
+        .gs-foot {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 10px;
+          padding: 9px 10px 4px;
+          margin-top: 4px;
+          border-top: 1px solid var(--rule-2);
+          font-size: 11px;
+          color: var(--ink-4);
+        }
+        .gs-keys { display: inline-flex; align-items: center; gap: 5px; }
+        @media (max-width: 640px) {
+          .gs-keys { display: none; }
+          .gs-panel { min-width: 0; }
+        }
+      `}</style>
     </div>
   );
 }

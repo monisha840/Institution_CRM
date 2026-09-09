@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../Icon";
-import { KPI } from "../ui";
+import { KPI, SkeletonTable, EmptyState } from "../ui";
 import { formatClassLabel } from "@/lib/format";
 import { isCollege, vocab, computeGpa, gradeFor, gpaClass } from "@/lib/institution";
 
@@ -56,7 +56,7 @@ function ModalShell({ title, sub, onClose, children, width = 520 }) {
   }, [onClose]);
   return (
     <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "rgba(20,16,10,0.45)",
+      position: "fixed", inset: 0, background: "var(--overlay)",
       display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
     }}>
       <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: width, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
@@ -508,7 +508,7 @@ function PeriodicTests({ E, role, session, showToast, refresh }) {
       </div>
 
       {loading ? (
-        <div className="empty" style={{ padding: 24 }}>Loading…</div>
+        <SkeletonTable rows={6} cols={4} />
       ) : !cls ? (
         <div className="empty" style={{ padding: 24 }}>Pick a class to start.</div>
       ) : subjects.length === 0 ? (
