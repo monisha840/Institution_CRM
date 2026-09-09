@@ -2326,7 +2326,7 @@ function MapModal({ routes, onClose }) {
   // Stylised "map" — colour-coded route lanes with stops as pins.
   // No real geo here; the sidebar list of routes feeds a vertical lane each
   // so the principal can see all routes' progress at a glance.
-  const palette = ["#c8510a", "#4a7a54", "#2f6048", "#b07c28", "#7a5cb0", "#1a8e8e"];
+  const palette = ["var(--accent)", "var(--ok)", "var(--teal)", "var(--warn)", "var(--info)", "var(--brand)"];
   return (
     <ModalShell title="Map view" sub="Live route lanes — each line is one bus" onClose={onClose} width={760}>
       <div className="card-body">
@@ -2386,7 +2386,7 @@ function MapModal({ routes, onClose }) {
                             background: done ? colour : cur ? "#fff" : "var(--card)",
                             border: `2px solid ${cur ? colour : "var(--rule, #e5dfd1)"}`,
                             transform: "translate(-50%, -50%)",
-                            boxShadow: cur ? `0 0 0 4px ${colour}33` : undefined,
+                            boxShadow: cur ? `0 0 0 4px color-mix(in srgb, ${colour} 20%, transparent)` : undefined,
                             cursor: "help",
                           }}
                         />

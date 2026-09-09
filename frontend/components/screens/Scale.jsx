@@ -40,10 +40,10 @@ const POST_RATINGS = [
 const TAG_COLOR = {
   delivery:       { bg: "var(--accent-soft)", color: "var(--accent-2, var(--accent))" },
   inclusion:      { bg: "var(--ok-soft, #e3f2e7)", color: "var(--ok)" },
-  engagement:     { bg: "var(--mint-soft, #e3f2e7)", color: "#1f7a3a" },
-  recording:      { bg: "var(--cream, #f7e9c8)", color: "#8a6b1a" },
+  engagement:     { bg: "var(--mint-soft)", color: "var(--mint-ink)" },
+  recording:      { bg: "var(--cream)", color: "var(--cream-ink)" },
   management:     { bg: "var(--bad-soft, #fbe1d8)", color: "var(--bad, #b13c1c)" },
-  responsiveness: { bg: "var(--warn-soft, #fff3cd)", color: "#856404" },
+  responsiveness: { bg: "var(--warn-soft)", color: "var(--warn)" },
 };
 
 const SIGNOFF_ITEMS = [

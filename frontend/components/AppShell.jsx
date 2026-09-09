@@ -141,7 +141,8 @@ export default function AppShell({ initialData, session }) {
   // Applied during render, not in an effect, so every label rendered below on
   // this same pass already reads the right vocabulary. An effect would leave
   // the first paint showing school wording on a college deployment.
-  setInstitutionType(institutionTypeFromSettings(data?.SETTINGS));
+  const institution = institutionTypeFromSettings(data?.SETTINGS);
+  setInstitutionType(institution);
   const V = vocab();
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [current, setCurrent] = useState(DEFAULT_SCREEN_BY_ROLE[session?.role] || "dashboard");
@@ -691,6 +692,7 @@ export default function AppShell({ initialData, session }) {
     return (
       <div
         data-theme={settings.theme}
+        data-institution={institution}
         data-density={settings.density}
         data-sidebar="expanded"
         style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: "32px 16px", background: "var(--bg-2)" }}
@@ -713,6 +715,7 @@ export default function AppShell({ initialData, session }) {
     <div
       className="app"
       data-theme={settings.theme}
+      data-institution={institution}
       data-density={settings.density}
       data-sidebar={settings.sidebar}
       data-mobile-drawer={mobileDrawerOpen ? "open" : "closed"}

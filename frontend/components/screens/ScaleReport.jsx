@@ -193,7 +193,7 @@ export default function ScreenScaleReport({ E, role, session, searchFocus, clear
         key,
         label: ({ A: "Academic output", E: "Expression", C: "Creativity & play", B: "Behaviour & habits" })[key] || key,
         short: ({ A: "Academic", E: "Expression", C: "Creativity", B: "Behaviour" })[key] || key,
-        color: ({ A: "#1f3f8b", E: "#1f7a3a", C: "#e8530e", B: "#c11d1d" })[key] || "#1f3f8b",
+        color: ({ A: "var(--brand)", E: "var(--ok)", C: "var(--accent)", B: "var(--err)" })[key] || "var(--brand)",
         score: data.score ?? null,
         bandLabel: data.band?.label || "",
         bandTone:  data.band?.tone  || "info",

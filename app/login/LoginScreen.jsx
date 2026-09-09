@@ -182,8 +182,8 @@ export default function LoginScreen({ next }) {
           overflow: hidden;
           background:
             radial-gradient(1200px 800px at -10% -10%, rgba(255,255,255,0.08), transparent 55%),
-            radial-gradient(900px 700px at 110% 110%, rgba(232,83,14,0.18), transparent 55%),
-            linear-gradient(160deg, var(--brand-blue, #1f3f8b) 0%, var(--brand-blue-2, #15306b) 100%);
+            radial-gradient(900px 700px at 110% 110%, var(--ring), transparent 55%),
+            linear-gradient(160deg, var(--brand) 0%, var(--brand-2) 100%);
           color: #fff;
           padding: 48px 56px;
           display: flex;
@@ -222,7 +222,7 @@ export default function LoginScreen({ next }) {
           font-size: 22px; font-weight: 600; letter-spacing: -0.01em;
           line-height: 1.1;
         }
-        .lp-school :global(span) { color: #ffd5bd; font-style: italic; }
+        .lp-school :global(span) { color: var(--accent-soft); font-style: italic; }
         .lp-trust {
           font-size: 11.5px; color: rgba(255,255,255,0.72);
           letter-spacing: 0.04em; text-transform: uppercase; margin-top: 4px;
@@ -250,9 +250,9 @@ export default function LoginScreen({ next }) {
         }
         .lp-ic {
           width: 32px; height: 32px; border-radius: 8px;
-          background: rgba(232,83,14,0.18); color: #ffd5bd;
+          background: rgba(255,255,255,0.14); color: var(--accent-soft);
           display: grid; place-items: center; flex-shrink: 0;
-          border: 1px solid rgba(232,83,14,0.28);
+          border: 1px solid rgba(255,255,255,0.22);
         }
         .lp-ft-title { font-size: 13px; font-weight: 600; }
         .lp-ft-blurb {
@@ -298,7 +298,7 @@ export default function LoginScreen({ next }) {
           background: #fff; padding: 3px; object-fit: contain;
           border: 1px solid var(--rule, #e5dfd1);
         }
-        .lp-brand-mobile .lp-school { color: var(--brand-blue); font-size: 17px; }
+        .lp-brand-mobile .lp-school { color: var(--brand); font-size: 17px; }
         .lp-brand-mobile .lp-school :global(span) { color: var(--accent); font-style: italic; }
 
         /* Card wrapper — a softer container around the form so the right pane

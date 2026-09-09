@@ -1,139 +1,318 @@
 /* ==========================================================================
-   Sanfort · Vidyalaya360 design system
-   Paper · warm cream · serif display · amber accent
+   Sirah_CRM · Vidyalaya360 design system
+
+   Two institution palettes, switched by the `data-institution` attribute
+   AppShell stamps on the app root from app_settings.school.institutionType
+   (see backend/lib/institution.js):
+
+     school  (default, :root)   Pantone — Transparent Yellow 11-0617 #f5efc6,
+                                Sceptre Red 20-0076 #4d0e12, Cerulean Blue
+                                15-4020 #a5bcd6, Potting Soil 19-1218 #4a2e27,
+                                Java Brown 19-0809 #231815.
+     college                    Sage #6c8c6f, Plum #7b5768, Dusty lilac
+                                #9e92ae, Soft mint #abccb4, Pale cream #dad8bc.
+
+   Every shade below is one of those anchors verbatim or a tint / shade /
+   blend of them — nothing off-palette.
+
+   Order matters. [data-theme="dark"] and [data-institution="college"] land
+   on the SAME element with equal specificity, so the dark blocks must stay
+   after the light ones, and college-dark uses a compound selector to
+   outrank school-dark.
    ========================================================================== */
 
+/* ==========================================================================
+   SCHOOL MODE — light (the default; also what login and the public forms
+   render in, since those sit outside AppShell)
+   ========================================================================== */
 :root {
-  /* Clean white / off-white palette
-     Surfaces step up gently so cards still read as elevated against the
-     page bg without needing heavy shadows. */
-  --bg:          #ffffff;
-  --bg-2:        #f5f5f7;
-  --card:        #ffffff;
-  --card-2:      #fafafb;
-  --rule:        #e5e7eb;
-  --rule-2:      #ececef;
+  /* Surfaces — Transparent Yellow lifted into a page cream. They step up
+     gently so cards read as elevated without heavy shadows. */
+  --bg:          #fbf8ec;
+  --bg-2:        #f5efc6;
+  --card:        #fffdf6;
+  --card-2:      #f9f4e2;
+  --rule:        #e4dcbe;
+  --rule-2:      #eee7cf;
+  --line:        #e4dcbe;   /* alias — inline styles across screens use --line */
 
-  /* Option B — full blue text palette. Every text shade is a blue
-     stepping from the brand navy (#1f3f8b, same hex used in receipts
-     + the orange-and-navy gradient buttons) down to a softer mid-tone
-     for placeholders. Replaces the previous near-black ramp so the
-     whole app reads in colour for school staff who flagged the old
-     near-black as hard to scan. Dark-theme overrides further down
-     stay unchanged — they were already legible on dark surfaces. */
-  --ink:         #1f3f8b;
-  --ink-2:       #2c4a8e;
-  --ink-3:       #4a6caf;
-  --ink-4:       #7a92c5;
+  /* Ink ramp — Java Brown stepping down through Potting Soil to a soft
+     placeholder tone. */
+  --ink:         #231815;
+  --ink-2:       #4a2e27;
+  --ink-3:       #6e5347;
+  --ink-4:       #9c8577;
 
-  /* Brand orange — sampled from the school logo (the central figure, book,
-     and "Sanvi Educational and Charitable Trust" arc). Slightly more
-     vibrant than the previous burnt-orange so the app reads "on brand". */
-  --accent:      #e8530e;
-  --accent-2:    #c04309;
-  --accent-soft: #fde6d6;
-  --accent-ink:  #ffffff;
+  /* Accent — Sceptre Red. The Pantone itself is near-black on cream, so it
+     takes the hover/pressed slot and the accent proper sits one step up
+     where it still reads as red. */
+  --accent:      #6e1218;
+  --accent-2:    #4d0e12;
+  --accent-soft: #f0ddd7;
+  --accent-ink:  #fffdf6;
+  --ring:        rgba(109, 18, 24, 0.16);
+  --ring-strong: rgba(109, 18, 24, 0.42);
 
-  /* Brand blue — sampled from the logo (figures, outer ring). Used by the
-     "Sanfort" wordmark and brand-prominent surfaces. */
-  --brand-blue:      #1f3f8b;
-  --brand-blue-2:    #15306b;
-  --brand-blue-soft: #e6ebf5;
+  /* Brand — Cerulean Blue. #a5bcd6 is too light to carry text on cream, so
+     the wordmark uses a deepened cerulean and the Pantone keeps the soft slot. */
+  --brand:           #4e6e92;
+  --brand-2:         #3a5673;
+  --brand-soft:      #dbe5f0;
 
-  /* Soft pastel icon backgrounds */
-  --mint:        #d8ebd4;
-  --mint-ink:    #4a7a54;
-  --peach:       #f7dcc4;
-  --peach-ink:   #b2622a;
-  --cream:       #f0e4c8;
-  --cream-ink:   #8a6f2e;
-  --sky:         #d6e4ed;
-  --sky-ink:     #4a6c85;
-  --rose:        #f2d5d2;
-  --rose-ink:    #a0514a;
-  --lilac:       #e4dbec;
-  --lilac-ink:   #6a548a;
+  /* Icon pucks — tints of the five anchors. The palette carries no green of
+     its own, so --mint is Cerulean blended into Transparent Yellow. */
+  --mint:        #dfe6cd;
+  --mint-ink:    #5f7350;
+  --mint-soft:   #eef1e0;
+  --peach:       #ead9c9;
+  --peach-ink:   #8a5a45;
+  --cream:       #f5efc6;
+  --cream-ink:   #7a6320;
+  --sky:         #cfdeeb;
+  --sky-ink:     #3e5c7c;
+  --rose:        #eedad6;
+  --rose-ink:    #7a2a2c;
+  --lilac:       #ded4dd;
+  --lilac-ink:   #6a4a5e;
 
-  /* Semantic */
-  --ok:          #4a7a54;
-  --ok-soft:     #dfecd8;
-  --warn:        #b07c28;
-  --warn-soft:   #f3e6c8;
-  --bad:         #b44a3c;
-  --bad-soft:    #f3d8d2;
-  --info:        #4a6c85;
-  --info-soft:   #d8e4ec;
-  --teal:        #3a7a6c;
-  --teal-soft:   #d4e7e3;
+  /* Semantic. --bad / --err stay a brighter brick so danger never collapses
+     into the wine-red accent. */
+  --ok:          #5f7350;
+  --ok-2:        #4c5c40;
+  --ok-soft:     #e3e8cf;
+  --warn:        #8a6b1e;
+  --warn-soft:   #f5efc6;
+  --bad:         #9c3a2e;
+  --bad-soft:    #f2ddd5;
+  --err:         #9c3a2e;
+  --err-soft:    #f2ddd5;
+  --info:        #4e6e92;
+  --info-soft:   #dbe5f0;
+  --teal:        #46707f;
+  --teal-soft:   #d4e2e6;
+
+  /* AI briefing card — Potting Soil into Java Brown */
+  --brief-1:      #3a241d;
+  --brief-2:      #231815;
+  --brief-ink:    #f5efc6;
+  --brief-accent: #d3bd7e;
+
+  /* iOS device bezel — Java Brown */
+  --device:      #231815;
+  --device-edge: #3d2a24;
 
   --radius:      14px;
   --radius-sm:   8px;
   --radius-lg:   20px;
 
-  --shadow-sm: 0 1px 2px rgba(58, 42, 20, 0.04);
-  --shadow:    0 2px 6px rgba(58, 42, 20, 0.05), 0 1px 2px rgba(58, 42, 20, 0.03);
-  --shadow-lg: 0 12px 32px rgba(58, 42, 20, 0.1), 0 2px 6px rgba(58, 42, 20, 0.06);
+  --shadow-sm: 0 1px 2px rgba(35, 24, 21, 0.05);
+  --shadow:    0 2px 6px rgba(35, 24, 21, 0.06), 0 1px 2px rgba(35, 24, 21, 0.04);
+  --shadow-lg: 0 12px 32px rgba(35, 24, 21, 0.12), 0 2px 6px rgba(35, 24, 21, 0.07);
 
   --font-sans:   "Manrope", system-ui, -apple-system, Segoe UI, sans-serif;
   --font-serif:  "Fraunces", Georgia, serif;
   --font-mono:   "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
 
-/* ---- Dark theme ----
-   Neutral cool-charcoal base (the earlier brown-tinted dark muddied the
-   orange accent). Surfaces step up clearly: bg → bg-2 → card → card-2.
-   Cards rely on a clean hairline border + faint inner highlight rather
-   than shadows (which rarely read on dark backgrounds). Pastel pucks
-   keep their identity without going neon. */
+/* ==========================================================================
+   COLLEGE MODE — light
+   Pale-cream page, deep-sage ink, plum accent, mint and lilac pucks.
+   ========================================================================== */
+[data-institution="college"] {
+  /* Surfaces — Pale cream lifted to a page tone */
+  --bg:          #fbfbf3;
+  --bg-2:        #f0f2e5;
+  --card:        #ffffff;
+  --card-2:      #f7f8ee;
+  --rule:        #dcdfc6;
+  --rule-2:      #e8ead6;
+  --line:        #dcdfc6;
+
+  /* Ink ramp — Sage darkened for body copy, the exact sage carrying the
+     muted tier. */
+  --ink:         #2e3d2f;
+  --ink-2:       #445a46;
+  --ink-3:       #6c8c6f;
+  --ink-4:       #9db09e;
+
+  /* Accent — Plum, verbatim */
+  --accent:      #7b5768;
+  --accent-2:    #63424f;
+  --accent-soft: #eee2e8;
+  --accent-ink:  #ffffff;
+  --ring:        rgba(123, 87, 104, 0.18);
+  --ring-strong: rgba(123, 87, 104, 0.45);
+
+  /* Brand — Sage deepened so the wordmark holds against a white card */
+  --brand:           #4f6b52;
+  --brand-2:         #3b5240;
+  --brand-soft:      #e2ece3;
+
+  /* Icon pucks — Soft mint and Pale cream verbatim, the rest tints of Plum
+     and Dusty lilac. */
+  --mint:        #abccb4;
+  --mint-ink:    #3f6349;
+  --mint-soft:   #dcebe1;
+  --peach:       #e7d9d5;
+  --peach-ink:   #8a6070;
+  --cream:       #dad8bc;
+  --cream-ink:   #6e6b3e;
+  --sky:         #d6d8e6;
+  --sky-ink:     #55607f;
+  --rose:        #edd9e0;
+  --rose-ink:    #7b5768;
+  --lilac:       #e2dcec;
+  --lilac-ink:   #6a5c82;
+
+  /* Semantic */
+  --ok:          #4f7a57;
+  --ok-2:        #3f6446;
+  --ok-soft:     #dceadf;
+  --warn:        #8a8244;
+  --warn-soft:   #ebe9cf;
+  --bad:         #a05a5f;
+  --bad-soft:    #f0dee2;
+  --err:         #a05a5f;
+  --err-soft:    #f0dee2;
+  --info:        #6a5c82;
+  --info-soft:   #e2dcec;
+  --teal:        #4c7a6e;
+  --teal-soft:   #d8e9e3;
+
+  /* AI briefing card — deep sage */
+  --brief-1:      #33422f;
+  --brief-2:      #253320;
+  --brief-ink:    #e6ecd9;
+  --brief-accent: #c3b6cd;
+
+  /* iOS device bezel — sage charcoal */
+  --device:      #23301f;
+  --device-edge: #35422f;
+
+  --shadow-sm: 0 1px 2px rgba(46, 61, 47, 0.05);
+  --shadow:    0 2px 6px rgba(46, 61, 47, 0.06), 0 1px 2px rgba(46, 61, 47, 0.04);
+  --shadow-lg: 0 12px 32px rgba(46, 61, 47, 0.12), 0 2px 6px rgba(46, 61, 47, 0.07);
+}
+
+/* ==========================================================================
+   SCHOOL MODE — dark
+   Java Brown / Potting Soil surfaces, Transparent Yellow ink, Cerulean Blue
+   used verbatim for the brand. Sceptre Red is lifted well off the Pantone:
+   at #4d0e12 it vanishes into a dark brown page.
+   ========================================================================== */
 [data-theme="dark"] {
-  --bg:         #13141a;
-  --bg-2:       #0d0e13;
-  --card:       #1e2028;
-  --card-2:     #181a21;
-  --rule:       #2e313b;
-  --rule-2:     #25282f;
+  --bg:         #1a110f;
+  --bg-2:       #120c0b;
+  --card:       #241916;
+  --card-2:     #1d1412;
+  --rule:       #3d2a24;
+  --rule-2:     #31221d;
+  --line:       #3d2a24;
 
-  /* Pure cool-cream text — high contrast against the dark surfaces */
-  --ink:        #f5f1e8;
-  --ink-2:      #d4cfbe;
-  --ink-3:      #948d7e;
-  --ink-4:      #5a554c;
+  --ink:        #f5efc6;
+  --ink-2:      #dcd2ac;
+  --ink-3:      #a89880;
+  --ink-4:      #756458;
 
-  /* Brighter accent so the orange pops against cool charcoal without burning.
-     Tuned to the logo's vivid orange. */
-  --accent:      #ff7a3d;
-  --accent-2:    #ff955f;
-  --accent-soft: #3d2716;
-  --accent-ink:  #1a1612;
+  --accent:      #c8595c;
+  --accent-2:    #dd7d80;
+  --accent-soft: #3d1a1c;
+  --accent-ink:  #1a110f;
+  --ring:        rgba(200, 89, 92, 0.22);
+  --ring-strong: rgba(200, 89, 92, 0.5);
 
-  /* Brand blue — lighter / more saturated for dark mode legibility */
-  --brand-blue:      #6f8ed4;
-  --brand-blue-2:    #93acdf;
-  --brand-blue-soft: #1d2638;
+  --brand:           #a5bcd6;
+  --brand-2:         #c3d3e5;
+  --brand-soft:      #22303e;
 
-  /* Pastel pucks — slightly desaturated dark fills with bright ink colours */
-  --mint:        #233e2d;   --mint-ink:  #95d0a4;
-  --peach:       #3f2c1c;   --peach-ink: #f0b58c;
-  --cream:       #382e1f;   --cream-ink: #d8b876;
-  --sky:         #20303f;   --sky-ink:   #9ec6dd;
-  --rose:        #3d2624;   --rose-ink:  #ecaba2;
-  --lilac:       #2e2638;   --lilac-ink: #c4afdb;
+  /* Pucks — deep fills of the anchors with bright ink on top */
+  --mint:        #2b3320;   --mint-ink:  #b6c68e;   --mint-soft: #222818;
+  --peach:       #3b2a1f;   --peach-ink: #dcb08c;
+  --cream:       #3a3320;   --cream-ink: #ded2a0;
+  --sky:         #23303e;   --sky-ink:   #a5bcd6;
+  --rose:        #3a2220;   --rose-ink:  #e2a19e;
+  --lilac:       #33262e;   --lilac-ink: #d0aebc;
 
-  /* Semantic colours — chip text + dot colours */
-  --ok:          #6caf7a;
-  --ok-soft:     #1f2f23;
-  --warn:        #dca055;
-  --warn-soft:   #312618;
-  --bad:         #de7264;
-  --bad-soft:    #301e1a;
-  --info:        #75a0c0;
-  --info-soft:   #1e2832;
-  --teal:        #6dafa3;
-  --teal-soft:   #1c2c2a;
+  --ok:          #9db47f;
+  --ok-2:        #b0c495;
+  --ok-soft:     #262e1d;
+  --warn:        #d8bd6a;
+  --warn-soft:   #33291a;
+  --bad:         #de8172;
+  --bad-soft:    #34201c;
+  --err:         #de8172;
+  --err-soft:    #34201c;
+  --info:        #a5bcd6;
+  --info-soft:   #22303e;
+  --teal:        #7fb0b8;
+  --teal-soft:   #1e2e31;
+
+  --brief-1:      #3a241d;
+  --brief-2:      #231815;
+  --brief-ink:    #f5efc6;
+  --brief-accent: #d3bd7e;
 
   --shadow-sm:  0 1px 0 rgba(255, 255, 255, 0.04), 0 1px 2px rgba(0, 0, 0, 0.5);
   --shadow:     0 1px 0 rgba(255, 255, 255, 0.04), 0 4px 14px rgba(0, 0, 0, 0.55);
   --shadow-lg:  0 1px 0 rgba(255, 255, 255, 0.05), 0 18px 40px rgba(0, 0, 0, 0.65);
+}
+
+/* ==========================================================================
+   COLLEGE MODE — dark
+   Sage-charcoal surfaces, Pale cream ink, lifted plum accent, Soft mint
+   brand. Compound selector so it outranks the school-dark block above.
+   ========================================================================== */
+[data-theme="dark"][data-institution="college"] {
+  --bg:         #161a14;
+  --bg-2:       #10130f;
+  --card:       #1f251c;
+  --card-2:     #1a1f18;
+  --rule:       #333c30;
+  --rule-2:     #293127;
+  --line:       #333c30;
+
+  --ink:        #dad8bc;
+  --ink-2:      #bfc0a2;
+  --ink-3:      #8f9a83;
+  --ink-4:      #626c59;
+
+  --accent:      #c491aa;
+  --accent-2:    #d8adc1;
+  --accent-soft: #3a2831;
+  --accent-ink:  #161a14;
+  --ring:        rgba(196, 145, 170, 0.22);
+  --ring-strong: rgba(196, 145, 170, 0.5);
+
+  /* Soft mint verbatim — it was mixed for exactly this kind of dark ground */
+  --brand:           #abccb4;
+  --brand-2:         #c6ddcc;
+  --brand-soft:      #223026;
+
+  --mint:        #253a2b;   --mint-ink:  #abccb4;   --mint-soft: #1e2f23;
+  --peach:       #3a2e2a;   --peach-ink: #ddc0b6;
+  --cream:       #34331f;   --cream-ink: #dad8bc;
+  --sky:         #262b3a;   --sky-ink:   #b6bcd8;
+  --rose:        #37262d;   --rose-ink:  #d9aabb;
+  --lilac:       #2f2a3a;   --lilac-ink: #c3b8d6;
+
+  --ok:          #8fbb97;
+  --ok-2:        #a6cbad;
+  --ok-soft:     #223026;
+  --warn:        #c9c67f;
+  --warn-soft:   #32311e;
+  --bad:         #cf8f95;
+  --bad-soft:    #352427;
+  --err:         #cf8f95;
+  --err-soft:    #352427;
+  --info:        #b3a6c8;
+  --info-soft:   #2b2638;
+  --teal:        #85b9ab;
+  --teal-soft:   #1e302b;
+
+  --brief-1:      #33422f;
+  --brief-2:      #253320;
+  --brief-ink:    #e6ecd9;
+  --brief-accent: #c3b6cd;
 }
 
 /* Cards lift off the bg via a hairline border + faint top-edge highlight.
@@ -159,7 +338,7 @@
 
 /* Topbar uses a translucent blur for a more native feel */
 [data-theme="dark"] .topbar {
-  background: rgba(19, 20, 26, 0.85);
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
   backdrop-filter: blur(10px) saturate(1.2);
   border-bottom-color: var(--rule);
 }
@@ -181,7 +360,7 @@
 [data-theme="dark"] textarea.input:focus,
 [data-theme="dark"] .topbar-search:focus-within {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(245, 144, 66, 0.18);
+  box-shadow: 0 0 0 3px var(--ring);
 }
 
 /* Buttons */
@@ -242,20 +421,20 @@
 /* AI-brief card — the hardcoded olive gradient looked sickly in dark mode.
    Re-skin to a deep teal-charcoal that matches the rest of the dark theme. */
 [data-theme="dark"] .ai-brief {
-  background: linear-gradient(135deg, #1d2a36 0%, #1a2230 100%);
+  background: linear-gradient(135deg, var(--brief-1) 0%, var(--brief-2) 100%);
   border: 1px solid var(--rule);
   color: var(--ink);
 }
 [data-theme="dark"] .ai-brief::before {
-  background: radial-gradient(circle at 80% 20%, rgba(245, 144, 66, 0.15), transparent 55%);
+  background: radial-gradient(circle at 80% 20%, color-mix(in srgb, var(--brief-accent) 22%, transparent), transparent 55%);
 }
-[data-theme="dark"] .ai-brief .eyebrow { color: var(--accent-2); }
-[data-theme="dark"] .ai-brief .headline { color: var(--ink); }
+[data-theme="dark"] .ai-brief .eyebrow { color: var(--brief-accent); }
+[data-theme="dark"] .ai-brief .headline { color: var(--brief-ink); }
 [data-theme="dark"] .ai-brief .insight-row {
   border-top-color: rgba(255, 255, 255, 0.08);
   color: var(--ink-2);
 }
-[data-theme="dark"] .ai-brief .insight-row .n { color: var(--accent-2); }
+[data-theme="dark"] .ai-brief .insight-row .n { color: var(--brief-accent); }
 
 /* Empty-state placeholders ("No data yet", "No items match…") */
 [data-theme="dark"] .empty { color: var(--ink-3); }
@@ -294,7 +473,6 @@ body, body * { font-weight: 700 !important; }
 
 /* Plain white background — no warm paper grain. Dark mode overrides too. */
 body.paper, body { background-image: none; }
-[data-theme="dark"] body { background-image: none; }
 
 button { font-family: inherit; color: inherit; border: 0; background: none; cursor: pointer; padding: 0; }
 input, select, textarea { font-family: inherit; color: inherit; }
@@ -304,7 +482,14 @@ a { color: inherit; text-decoration: none; }
 .serif { font-family: var(--font-serif); font-weight: 400; letter-spacing: -0.01em; }
 
 /* ---- Shell ---- */
-.app { display: grid; grid-template-columns: auto 1fr; min-height: 100vh; }
+/* The palette lives on .app (data-theme + data-institution land here), and
+   body sits ABOVE it — so body's var(--bg) always resolves against :root.
+   .app has to paint the page ground itself or the mode never shows. */
+.app {
+  display: grid; grid-template-columns: auto 1fr; min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+}
 
 .sidebar {
   width: 232px;
@@ -329,7 +514,7 @@ a { color: inherit; text-decoration: none; }
 .brand { display: flex; align-items: center; gap: 11px; padding: 0 8px 22px; }
 .brand-mark {
   width: 32px; height: 32px; border-radius: 9px;
-  background: linear-gradient(135deg, var(--ok), #2f6048);
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
   color: #fff;
   display: grid; place-items: center;
   font-weight: 600; font-size: 14px;
@@ -341,7 +526,7 @@ a { color: inherit; text-decoration: none; }
    "International" in vivid orange, sub-line in muted ink. */
 .brand-text .b1 {
   font-family: var(--font-serif); font-size: 17px; letter-spacing: -0.015em;
-  color: var(--brand-blue);
+  color: var(--brand);
 }
 .brand-text .b1 .num { color: var(--accent); }
 .brand-text .b2 {
@@ -473,7 +658,7 @@ a { color: inherit; text-decoration: none; }
   flex-shrink: 0;
 }
 @keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(74,122,84,0.5); }
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 50%, transparent); }
   70% { box-shadow: 0 0 0 6px transparent; }
   100% { box-shadow: 0 0 0 0 transparent; }
 }
@@ -487,9 +672,9 @@ a { color: inherit; text-decoration: none; }
   animation: stop-radar 1.6s ease-out infinite;
 }
 @keyframes stop-radar {
-  0%   { box-shadow: 0 0 0 0 rgba(245, 144, 66, 0.55), 0 0 0 0 rgba(245, 144, 66, 0.35); }
-  70%  { box-shadow: 0 0 0 10px rgba(245, 144, 66, 0),   0 0 0 18px rgba(245, 144, 66, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(245, 144, 66, 0),     0 0 0 0 rgba(245, 144, 66, 0); }
+  0%   { box-shadow: 0 0 0 0 var(--ring-strong), 0 0 0 0 var(--ring); }
+  70%  { box-shadow: 0 0 0 10px transparent, 0 0 0 18px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent,     0 0 0 0 transparent; }
 }
 
 .live-pill {
@@ -549,7 +734,7 @@ a { color: inherit; text-decoration: none; }
 .btn:hover { background: var(--card-2); border-color: var(--ink-4); }
 .btn svg { width: 14px; height: 14px; flex-shrink: 0; }
 .btn.primary { background: var(--ok); color: #fff; border-color: var(--ok); }
-.btn.primary:hover { background: #3d6445; border-color: #3d6445; }
+.btn.primary:hover { background: var(--ok-2); border-color: var(--ok-2); }
 .btn.accent { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .btn.accent:hover { background: var(--accent-2); border-color: var(--accent-2); }
 .btn.ghost { background: transparent; border-color: transparent; color: var(--ink-2); }
@@ -963,25 +1148,25 @@ a { color: inherit; text-decoration: none; }
 
 /* AI briefing card */
 .ai-brief {
-  background: linear-gradient(135deg, #243820 0%, #1e2e1a 100%);
-  color: #e8f0df;
+  background: linear-gradient(135deg, var(--brief-1) 0%, var(--brief-2) 100%);
+  color: var(--brief-ink);
   border: 0;
   position: relative;
   overflow: hidden;
 }
 .ai-brief::before {
   content: ""; position: absolute; inset: 0;
-  background: radial-gradient(circle at 80% 20%, rgba(200,160,90,0.15), transparent 50%);
+  background: radial-gradient(circle at 80% 20%, color-mix(in srgb, var(--brief-accent) 22%, transparent), transparent 50%);
 }
 .ai-brief .eyebrow {
-  color: #c8b870;
+  color: var(--brief-accent);
   font-size: 10.5px; text-transform: uppercase;
   letter-spacing: 0.12em; font-weight: 500;
   display: inline-flex; align-items: center; gap: 6px;
 }
-.ai-brief .headline { font-family: var(--font-serif); font-size: 22px; letter-spacing: -0.015em; color: #fff; margin: 10px 0 16px; line-height: 1.1; }
+.ai-brief .headline { font-family: var(--font-serif); font-size: 22px; letter-spacing: -0.015em; color: var(--brief-ink); margin: 10px 0 16px; line-height: 1.1; }
 .ai-brief .insight-row { display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid rgba(255,255,255,0.1); font-size: 12.5px; line-height: 1.5; color: rgba(255,255,255,0.85); }
-.ai-brief .insight-row .n { font-family: var(--font-mono); color: #c8b870; font-weight: 500; flex-shrink: 0; }
+.ai-brief .insight-row .n { font-family: var(--font-mono); color: var(--brief-accent); font-weight: 500; flex-shrink: 0; }
 
 .chartbox { width: 100%; height: auto; display: block; }
 .hr { height: 1px; background: var(--rule); }
@@ -1170,9 +1355,9 @@ a { color: inherit; text-decoration: none; }
 .ios-frame {
   position: relative;
   border-radius: 48px;
-  background: #1a1612;
+  background: var(--device);
   padding: 14px;
-  box-shadow: 0 30px 60px rgba(0,0,0,0.3), 0 0 0 2px #2a2220 inset;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.3), 0 0 0 2px var(--device-edge) inset;
 }
 .ios-frame-screen {
   border-radius: 36px;
@@ -1183,7 +1368,7 @@ a { color: inherit; text-decoration: none; }
 .ios-notch {
   position: absolute; top: 22px; left: 50%; transform: translateX(-50%);
   width: 110px; height: 34px; border-radius: 999px;
-  background: #1a1612; z-index: 20;
+  background: var(--device); z-index: 20;
 }
 .ios-statusbar {
   position: absolute; top: 0; left: 0; right: 0; height: 54px;

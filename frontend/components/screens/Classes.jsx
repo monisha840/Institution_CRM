@@ -448,7 +448,7 @@ function TeacherRow({ sectionKey, teacher, teachers, canAssign, onAssign, onUnas
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{
                   width: 24, height: 24, borderRadius: "50%",
-                  background: "linear-gradient(135deg, var(--ok), #2f6048)",
+                  background: "linear-gradient(135deg, var(--brand), var(--brand-2))",
                   color: "#fff", display: "grid", placeItems: "center",
                   fontSize: 10, fontWeight: 600, flexShrink: 0,
                 }}>{initials(teacher.name)}</span>
@@ -506,7 +506,7 @@ function TeacherRow({ sectionKey, teacher, teachers, canAssign, onAssign, onUnas
                 >
                   <span style={{
                     width: 20, height: 20, borderRadius: "50%",
-                    background: "linear-gradient(135deg, var(--ok), #2f6048)",
+                    background: "linear-gradient(135deg, var(--brand), var(--brand-2))",
                     color: "#fff", display: "grid", placeItems: "center",
                     fontSize: 9, fontWeight: 600, flexShrink: 0,
                   }}>{initials(t.name)}</span>
