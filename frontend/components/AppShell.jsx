@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Icon from "./Icon";
 import Sidebar, { NAV_BY_ROLE, getAllowedNavIds } from "./Sidebar";
+import { setInstitutionType, institutionTypeFromSettings, vocab } from "@/lib/institution";
 import MobileShell from "./MobileShell";
 import Tweaks from "./Tweaks";
 import GlobalSearch from "./GlobalSearch";
@@ -137,6 +138,11 @@ const DEFAULT_SETTINGS = {
 
 export default function AppShell({ initialData, session }) {
   const [data, setData] = useState(initialData);
+  // Applied during render, not in an effect, so every label rendered below on
+  // this same pass already reads the right vocabulary. An effect would leave
+  // the first paint showing school wording on a college deployment.
+  setInstitutionType(institutionTypeFromSettings(data?.SETTINGS));
+  const V = vocab();
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [current, setCurrent] = useState(DEFAULT_SCREEN_BY_ROLE[session?.role] || "dashboard");
   // Set by GlobalSearch when the user clicks a result. The destination

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../Icon";
 import { KPI } from "../ui";
 import { formatClassLabel } from "@/lib/format";
+import { isCollege, vocab, computeGpa, gradeFor, gpaClass } from "@/lib/institution";
 
 // The periodic tests + term exams get a dedicated class-teacher grid (below);
 // they're also listed here so their type labels render across the exam
@@ -211,6 +212,8 @@ export default function ScreenExams({ E, refresh, role, session }) {
         </div>
       )}
 
+      {isCollege() && <SemesterGpa E={E} />}
+
       {/* Periodic tests — class-teacher subject-wise grid */}
       {isStaff && (
         <PeriodicTests E={E} role={role} session={session} showToast={showToast} refresh={refresh} />
@@ -285,6 +288,105 @@ export default function ScreenExams({ E, refresh, role, session }) {
 // ---------- Periodic tests: class-teacher subject-wise grid ----------
 // Pick a class + test (I–IV), then enter every student's mark for every
 // subject in one grid. Backed by /api/exams/periodic (exams/exam_marks).
+
+// ---------------------------------------------------------------------------
+// Credit-weighted GPA — college mode only.
+//
+// Built from marks already in the system: each mark is scored as a percentage
+// of its exam's max, converted to a 10-point grade, then weighted by the
+// subject's credits. Subjects without an explicit credit value count as 1 so a
+// missing credit never silently zeroes a student's GPA.
+// ---------------------------------------------------------------------------
+function SemesterGpa({ E }) {
+  const V = vocab();
+
+  const creditBySubject = useMemo(() => {
+    const m = new Map();
+    for (const s of E.SUBJECTS || []) {
+      const c = Number(s.credits);
+      m.set(s.name, Number.isFinite(c) && c > 0 ? c : 1);
+    }
+    return m;
+  }, [E.SUBJECTS]);
+
+  const examById = useMemo(() => {
+    const m = new Map();
+    for (const e of E.EXAMS || []) m.set(e.id, e);
+    return m;
+  }, [E.EXAMS]);
+
+  const rows = useMemo(() => {
+    const byStudent = new Map();
+    for (const mk of E.MARKS || []) {
+      const ex = examById.get(mk.examId);
+      if (!ex) continue;
+      const cur = byStudent.get(mk.studentId) || {
+        id: mk.studentId, name: mk.studentName || mk.studentId, cls: ex.cls, marks: [],
+      };
+      cur.marks.push({
+        score: mk.score,
+        maxMarks: mk.maxMarks || ex.maxMarks,
+        credits: creditBySubject.get(ex.subject),
+      });
+      byStudent.set(mk.studentId, cur);
+    }
+    return [...byStudent.values()]
+      .map((s) => ({ ...s, gpa: computeGpa(s.marks), papers: s.marks.length }))
+      .filter((s) => s.gpa != null)
+      .sort((a, b) => b.gpa - a.gpa);
+  }, [E.MARKS, examById, creditBySubject]);
+
+  if (!rows.length) return null;
+
+  const avg = Math.round((rows.reduce((a, r) => a + r.gpa, 0) / rows.length) * 100) / 100;
+
+  return (
+    <div className="card" style={{ marginBottom: 14 }}>
+      <div className="card-head">
+        <div>
+          <div className="card-title">Grade point average</div>
+          <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
+            Credit-weighted, 10-point scale · {rows.length} students · cohort average {avg.toFixed(2)}
+          </div>
+        </div>
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>{V.classWord}</th>
+              <th className="num">Papers</th>
+              <th className="num">GPA</th>
+              <th>Grade</th>
+              <th>Classification</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => {
+              const g = gradeFor(r.gpa * 10);
+              return (
+                <tr key={r.id}>
+                  <td>{r.name}</td>
+                  <td>{formatClassLabel(r.cls)}</td>
+                  <td className="num">{r.papers}</td>
+                  <td className="num"><b>{r.gpa.toFixed(2)}</b></td>
+                  <td>
+                    <span className={"chip " + (r.gpa >= 7.5 ? "ok" : r.gpa >= 5 ? "warn" : "bad")}>
+                      <span className="dot" />{g.letter}
+                    </span>
+                  </td>
+                  <td style={{ color: "var(--ink-3)", fontSize: 12 }}>{gpaClass(r.gpa)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function PeriodicTests({ E, role, session, showToast, refresh }) {
   const isTeacher = role === "teacher";
 

@@ -41,3 +41,19 @@ alter table complaints add column if not exists category text;
 -- Tell PostgREST to reload its schema cache so the new columns are queryable
 -- immediately rather than after its next refresh.
 notify pgrst, 'reload schema';
+
+-- ---------- subjects: credit hours (college mode) ----------
+-- College mode computes a credit-weighted GPA on the Exams screen. Subjects
+-- without a credit value are weighted as 1 by computeGpa() rather than 0, so
+-- this column is an enhancement and never a prerequisite.
+alter table subjects add column if not exists credits int default 4;
+
+-- ---------- institution mode ----------
+-- 'school' or 'college'. Read by backend/lib/institution.js and switchable
+-- from Settings → Institution. Nothing is migrated when it changes: the same
+-- records are simply presented with different vocabulary.
+insert into app_settings (section, key, value)
+values ('school', 'institutionType', '"school"')
+on conflict (section, key) do nothing;
+
+notify pgrst, 'reload schema';

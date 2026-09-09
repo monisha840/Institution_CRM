@@ -1,3 +1,4 @@
+import { isCollege, vocab } from "./institution";
 // Indian-format money helpers, used both server- and client-side.
 
 export const money = (n) => "₹" + Number(n).toLocaleString("en-IN");
@@ -77,14 +78,27 @@ export function classNameFromNumber(n) {
 //   "5-A"  → "Class V"
 //   "13-A" → "PRE-MONT"
 //   "14"   → "MONT I"
-export function formatClassLabel(cls) {
+export function formatClassLabel(cls, type) {
   if (!cls && cls !== 0) return "—";
   const [head] = String(cls).split("-");
   const n = Number(head);
   if (!n || Number.isNaN(n)) return String(cls);
+  // College mode reads the same numeric key as a semester, in plain digits —
+  // "Semester 3", never "Semester III". The stored value is untouched, so a
+  // deployment can be flipped between modes without migrating a single row.
+  if (isCollege(type)) return `${vocab(type).classWord} ${n}`;
   const name = classNameFromNumber(n);
   if (n >= 13) return name; // pre-school labels already self-contained
   return `Class ${name}`;
+}
+
+/** Class label including the section, e.g. "Class V · A" / "Semester 3 · A". */
+export function formatClassSectionLabel(cls, type) {
+  if (!cls && cls !== 0) return "—";
+  const parts = String(cls).split("-");
+  const base = formatClassLabel(cls, type);
+  const section = parts[1];
+  return section ? `${base} · ${section}` : base;
 }
 
 // Holidays / sudden leave — stored as academic.holidays JSON:

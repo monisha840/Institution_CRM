@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Icon from "./Icon";
 import { AvatarChip } from "./ui";
+import { vocab, isCollege } from "@/lib/institution";
 
 // Nav items per role. Five real roles now (admin replaces the old "super"
 // demo; academic_director is brand new).
@@ -336,6 +337,36 @@ function isCustomRoleKey(role) {
 //
 // Exported because AppShell uses `getAllowedNavIds(...)` to drive its
 // auto-snap effect against the same set the sidebar shows.
+
+// ---------------------------------------------------------------------------
+// Institution vocabulary for the nav. Applied at render time (not at module
+// load) because the mode is only known once settings have loaded, and it can
+// be flipped from the Settings screen without a reload.
+// ---------------------------------------------------------------------------
+const COLLEGE_NAV_LABELS = {
+  classes:   "Programmes & Semesters",
+  tc:        "Migration certificates",
+  messages:  "Guardian messages",
+  staff:     "Faculty",
+  exams:     "Exams & Grades",
+  academic:  "Course log",
+  enquiries: "Admissions",
+  attendance:"Attendance",
+};
+const COLLEGE_SECTION_LABELS = { School: "College" };
+
+function relabelNav(items) {
+  if (!isCollege()) return items;
+  return (items || []).map((it) => {
+    if (it.section) {
+      const next = COLLEGE_SECTION_LABELS[it.section];
+      return next ? { ...it, section: next } : it;
+    }
+    const next = COLLEGE_NAV_LABELS[it.id];
+    return next ? { ...it, label: next } : it;
+  });
+}
+
 export function buildSidebarNav(role, permissions, permExplicit) {
   const isCustom = isCustomRoleKey(role);
   const base = NAV_BY_ROLE[role] || (isCustom ? FEATURE_NAV_CATALOG : NAV_BY_ROLE.admin);
@@ -373,7 +404,7 @@ export function buildSidebarNav(role, permissions, permExplicit) {
     }
   }
 
-  return kept;
+  return relabelNav(kept);
 }
 
 // Just the ids (no section headers) — used by AppShell's auto-snap.

@@ -26,6 +26,24 @@ function serializeSettings(draft) {
 
 const SECTIONS = [
   {
+    key: "school",
+    t: "Institution",
+    fields: [
+      {
+        k: "institutionType",
+        label: "Institution type",
+        hint: "Switches the whole app between school and college vocabulary — classes become semesters, parents become guardians, and college mode adds credit-weighted GPA to Exams. No data is migrated; the same records are simply presented differently.",
+        options: [
+          { value: "school",  label: "School (Class I-XII, parents)" },
+          { value: "college", label: "College (Semesters, guardians, GPA)" },
+        ],
+      },
+      { k: "name",        label: "Institution name" },
+      { k: "city",        label: "City" },
+      { k: "programme",   label: "Programme / board", hint: "College: e.g. B.Sc Computer Science. School: e.g. CBSE." },
+    ],
+  },
+  {
     key: "trust",
     t: "Trust identity",
     fields: [
@@ -364,7 +382,17 @@ export default function ScreenSettings({ role, E, refresh }) {
                   <div className="lrow" key={it.k}>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 11, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 500 }}>{it.label}</div>
-                      {canEdit ? (
+                      {canEdit && it.options ? (
+                        <select
+                          value={value || it.options[0].value}
+                          onChange={(e) => setField(s.key, it.k, e.target.value)}
+                          style={inputStyle}
+                        >
+                          {it.options.map((o) => (
+                            <option key={o.value} value={o.value}>{o.label}</option>
+                          ))}
+                        </select>
+                      ) : canEdit ? (
                         <input
                           type="text"
                           value={value}
@@ -373,7 +401,11 @@ export default function ScreenSettings({ role, E, refresh }) {
                           style={inputStyle}
                         />
                       ) : (
-                        <div style={{ fontSize: 13, marginTop: 3 }}>{value || "—"}</div>
+                        <div style={{ fontSize: 13, marginTop: 3 }}>
+                          {it.options
+                            ? (it.options.find((o) => o.value === value) || it.options[0]).label
+                            : (value || "—")}
+                        </div>
                       )}
                       {it.hint && (
                         <div style={{ fontSize: 10.5, color: "var(--ink-4)", marginTop: 4 }}>{it.hint}</div>
