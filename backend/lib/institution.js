@@ -85,6 +85,27 @@ export function institutionTypeFromSettings(settings) {
   return INSTITUTION_TYPES.includes(raw) ? raw : "school";
 }
 
+
+// The institution's display name, set from settings alongside the mode so the
+// sidebar brand reads "Sirah Demo College" instead of a hardcoded string.
+let CURRENT_NAME = "";
+
+export function setInstitutionName(n) {
+  CURRENT_NAME = typeof n === "string" ? n.trim() : "";
+  return CURRENT_NAME;
+}
+
+export function institutionName() {
+  return CURRENT_NAME || (CURRENT === "college" ? "Sirah College" : "Sirah School");
+}
+
+/** Split the name into a lead word and the remainder, for two-tone branding. */
+export function institutionNameParts() {
+  const full = institutionName();
+  const i = full.indexOf(" ");
+  return i === -1 ? { lead: full, rest: "" } : { lead: full.slice(0, i), rest: full.slice(i) };
+}
+
 /** The active vocabulary. Pass a type to override the module default. */
 export function vocab(type) {
   return VOCAB[type && INSTITUTION_TYPES.includes(type) ? type : CURRENT] || VOCAB.school;

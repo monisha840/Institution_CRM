@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Icon from "./Icon";
 import Sidebar, { NAV_BY_ROLE, getAllowedNavIds } from "./Sidebar";
-import { setInstitutionType, institutionTypeFromSettings, vocab } from "@/lib/institution";
+import { setInstitutionType, institutionTypeFromSettings, setInstitutionName, vocab } from "@/lib/institution";
 import MobileShell from "./MobileShell";
 import Tweaks from "./Tweaks";
 import GlobalSearch from "./GlobalSearch";
@@ -143,6 +143,7 @@ export default function AppShell({ initialData, session }) {
   // the first paint showing school wording on a college deployment.
   const institution = institutionTypeFromSettings(data?.SETTINGS);
   setInstitutionType(institution);
+  setInstitutionName(data?.SETTINGS?.school?.name);
   const V = vocab();
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [current, setCurrent] = useState(DEFAULT_SCREEN_BY_ROLE[session?.role] || "dashboard");

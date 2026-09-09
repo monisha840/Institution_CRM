@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Icon from "./Icon";
 import { AvatarChip } from "./ui";
-import { vocab, isCollege } from "@/lib/institution";
+import { vocab, isCollege, institutionNameParts } from "@/lib/institution";
 
 // Nav items per role. Five real roles now (admin replaces the old "super"
 // demo; academic_director is brand new).
@@ -354,14 +354,23 @@ const COLLEGE_NAV_LABELS = {
   attendance:"Attendance",
 };
 const COLLEGE_SECTION_LABELS = { School: "College" };
+// Applies in both modes: the Trust bucket now holds only Finance.
+const SECTION_RENAMES = { Trust: "Finance" };
+
+/** True when a module is hidden for this deployment. Screens use this so a
+ *  shortcut card can't route to a module the sidebar has removed. */
+export function isModuleTrimmed(id) {
+  return TRIMMED_MODULES.has(id);
+}
 
 function relabelNav(items) {
-  if (!isCollege()) return items;
+  const college = isCollege();
   return (items || []).map((it) => {
     if (it.section) {
-      const next = COLLEGE_SECTION_LABELS[it.section];
+      const next = (college && COLLEGE_SECTION_LABELS[it.section]) || SECTION_RENAMES[it.section];
       return next ? { ...it, section: next } : it;
     }
+    if (!college) return it;
     const next = COLLEGE_NAV_LABELS[it.id];
     return next ? { ...it, label: next } : it;
   });
@@ -494,11 +503,12 @@ export default function Sidebar({ current, setCurrent, role, user, permissions, 
             The wrapping div keeps the rounded square frame consistent with the
             rest of the design system. */}
         <div className="brand-mark" style={{ background: "#fff", padding: 2, overflow: "hidden" }}>
-          <img src="/logo.png" alt="Sirah Demo School" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+          <img src="/logo.png" alt={institutionNameParts().lead} style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
         </div>
         <div className="brand-text">
           <div className="b1">
-            Sirah<span className="num"> International</span>
+            {institutionNameParts().lead}
+            <span className="num">{institutionNameParts().rest}</span>
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { isModuleTrimmed } from "./Sidebar";
 import Icon from "./Icon";
 import { formatClassLabel } from "@/lib/format";
 
@@ -11,6 +12,9 @@ import { formatClassLabel } from "@/lib/format";
 //
 // Only teachers and admins use SCALE, so the whole card is gated to them.
 export default function QuickAccessRecent({ role, session, onOpenItem }) {
+  // SCALE is hidden for this deployment — don't offer a shortcut into it.
+  if (isModuleTrimmed("scale")) return null;
+
   const enabled = role === "teacher" || role === "admin";
   const [recent, setRecent] = useState([]);
 
