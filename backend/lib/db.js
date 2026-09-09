@@ -6488,6 +6488,11 @@ export async function listSubjects() {
         id: s.id, name: s.name,
         code: s.code || null,
         category: s.category || "core",
+        // Credit hours drive the credit-weighted GPA in college mode. Dropping
+        // this made every paper weigh the same, so a 2-credit lab counted as
+        // much as a 4-credit core paper. Left undefined when unset, which
+        // computeGpa() treats as a weight of 1.
+        credits: s.credits == null ? undefined : Number(s.credits),
       });
     }
   };
