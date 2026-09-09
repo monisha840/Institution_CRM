@@ -126,14 +126,14 @@ const USER_DEF = [
 ];
 
 // ---- classes & subjects ---------------------------------------------------
+// Names match the 7 rows schema.sql already seeds into `subjects` (whose
+// `name` column is UNIQUE) so the timetable and exam pickers line up with
+// the canonical list instead of introducing near-duplicates.
 const SUBJECT_DEF = [
-  ["English", "ENG", "core"], ["Mathematics", "MAT", "core"], ["Science", "SCI", "core"],
-  ["Social Studies", "SST", "core"], ["Tamil", "TAM", "language"], ["Hindi", "HIN", "language"],
-  ["Computer Science", "CSC", "elective"],
+  ["English", "ENG", "language"], ["Maths", "MAT", "core"], ["Science", "SCI", "core"],
+  ["Social Science", "SST", "core"], ["Tamil", "TAM", "language"], ["Hindi", "HIN", "language"],
+  ["PT", "PT", "activity"],
 ];
-const subjects = SUBJECT_DEF.map(([name, code, category], i) => ({
-  id: `SUB-${i + 1}`, name, code, category,
-}));
 const classes = [1,2,3,4,5,6,7,8].map((n) => ({
   n, label: `Class ${n}`, sections: SECTIONS,
   subjects: SUBJECT_DEF.slice(0, n >= 6 ? 7 : 5).map((s) => s[0]),
@@ -191,10 +191,10 @@ const enquiries = Array.from({ length: 14 }, (_, i) => ({
 
 // ---- exams & marks --------------------------------------------------------
 const exams = [
-  { id: "EXM-01", name: "Unit Test I",   type: "unit_test", cls: "5A", subject: "Mathematics", max_marks: 50, date: iso(daysAgo(28)) },
+  { id: "EXM-01", name: "Unit Test I",   type: "unit_test", cls: "5A", subject: "Maths", max_marks: 50, date: iso(daysAgo(28)) },
   { id: "EXM-02", name: "Unit Test I",   type: "unit_test", cls: "5A", subject: "Science",     max_marks: 50, date: iso(daysAgo(26)) },
   { id: "EXM-03", name: "Mid Term",      type: "midterm",   cls: "6B", subject: "English",     max_marks: 100, date: iso(daysAgo(14)) },
-  { id: "EXM-04", name: "Mid Term",      type: "midterm",   cls: "7A", subject: "Mathematics", max_marks: 100, date: iso(daysAgo(12)) },
+  { id: "EXM-04", name: "Mid Term",      type: "midterm",   cls: "7A", subject: "Maths", max_marks: 100, date: iso(daysAgo(12)) },
 ].map((e) => ({ ...e, created_by: "Latha Raman" }));
 
 const exam_marks = [];
@@ -241,18 +241,18 @@ const routes = [
 
 // ---- complaints -----------------------------------------------------------
 const COMPLAINT_DEF = [
-  ["Bus arriving late on RT-02", "transport", "open"],
-  ["Request for extra Maths worksheets", "academic", "in_progress"],
-  ["Classroom fan not working — 6B", "non_academic", "open"],
-  ["Library book reissue request", "non_academic", "resolved"],
-  ["Clarification on Term II fee", "non_academic", "resolved"],
+  ["Bus arriving late on RT-02", "Open"],
+  ["Request for extra Maths worksheets", "In Progress"],
+  ["Classroom fan not working - 6B", "Open"],
+  ["Library book reissue request", "Resolved"],
+  ["Clarification on Term II fee", "Resolved"],
 ];
-const complaints = COMPLAINT_DEF.map(([issue, category, status], i) => {
+const complaints = COMPLAINT_DEF.map(([issue, status], i) => {
   const s = students[(i * 4) % students.length];
   return {
     id: `CMP-${6001 + i}`,
     student: s.name, student_id: s.id, cls: s.cls, parent: s.parent,
-    issue, type: "general", category,
+    issue, type: "general",
     date: iso(daysAgo(i * 3 + 1)),
     status, assigned: pick(["Rashmi Venkatesh", "Ganesh Murthy", "Prakash Nair"], i),
     submitted_by: "parent",
@@ -271,7 +271,7 @@ const ACT_DEF = [
   ["fee","warn","Fee overdue","5 students crossed 60 days"],
 ];
 const activities = ACT_DEF.map(([t, tone, title, sub], i) => ({
-  id: `ACT-${7001 + i}`, t, tone, title, sub, ts: ts(i),
+  id: 7001 + i, t, tone, title, sub, ts: ts(i),
 }));
 
 // ---- timetable ------------------------------------------------------------
@@ -312,7 +312,6 @@ async function main() {
   await upsert("schools", [{ ...SCHOOL, status: "Active", students: students.length,
                              fees: recent_fees.reduce((a, r) => a + r.amount, 0), puck: "ink" }], "id");
   await upsert("users", users, "id");
-  await upsert("subjects", subjects, "id");
   await upsert("classes", classes, "n");
   await upsert("students", students, "id");
   await upsert("staff", staff, "id");
