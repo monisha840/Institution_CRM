@@ -8,7 +8,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Icon from "../Icon";
-import { AvatarChip, Skeleton } from "../ui";
+import { AvatarChip, Skeleton, ScreenToast as Toast, PageHeader } from "../ui";
 
 const ROLE_LABEL = {
   admin: "Admin",
@@ -20,18 +20,6 @@ const ROLE_LABEL = {
   trust_accountant: "Trust Accountant",
 };
 
-function Toast({ msg, tone, onClose }) {
-  if (!msg) return null;
-  const bg = tone === "ok" ? "var(--ok)" : tone === "err" ? "var(--bad, #b13c1c)" : "var(--ink)";
-  return (
-    <div onClick={onClose} role="status" style={{
-      position: "fixed", bottom: 18, right: 18, zIndex: 9000,
-      background: bg, color: "#fff", padding: "9px 14px", borderRadius: 8,
-      fontSize: 12, fontWeight: 500, cursor: "pointer", maxWidth: 360,
-      boxShadow: "0 12px 30px -16px rgba(0,0,0,0.35)",
-    }}>{msg}</div>
-  );
-}
 
 export default function ScreenAccount({ session, refresh }) {
   const [tab, setTab] = useState("profile"); // 'profile' | 'security'
@@ -61,16 +49,9 @@ export default function ScreenAccount({ session, refresh }) {
     <div className="page">
       <Toast msg={toast?.msg} tone={toast?.tone} onClose={() => setToast(null)} />
 
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">Account · {ROLE_LABEL[profile?.role || session?.role] || ""}</div>
-          <div className="page-title">My <span className="amber">account</span></div>
-          <div className="page-sub">
-            Update your name, sign-in email, or password. Phone is read-only —
-            ask the school office to change it.
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        sub={"Update your name, sign-in email, or password. Phone is read-only — ask the school office to change it."}
+      />
 
       <div className="card" style={{ maxWidth: 720 }}>
         <div className="card-head" style={{ flexWrap: "wrap" }}>

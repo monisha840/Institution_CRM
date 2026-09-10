@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Icon from "../Icon";
-import { KPI, EmptyState } from "../ui";
+import { KPI, EmptyState, PageHeader } from "../ui";
 import { resolveSchool, downloadPdf } from "@/lib/export";
 
 // Canonical category list — driven by the spec ("Registration · Affiliation
@@ -325,26 +325,17 @@ export default function ScreenGovernmentDocuments({ E, role, session, refresh })
         }}>{toast.msg}</div>
       )}
 
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">Governance · Compliance</div>
-          <div className="page-title">Government <span className="amber">documents</span></div>
-          <div className="page-sub">
-            Trust registration, 80G / 12A certificates, building NOC, fire safety,
-            licences. Track expiry dates so renewals never lapse.
-          </div>
-        </div>
-        <div className="page-actions">
-          <button className="btn" onClick={exportPdf} disabled={filtered.length === 0} title="Open a printable, branded PDF report">
+      <PageHeader
+        sub={"Trust registration, 80G / 12A certificates, building NOC, fire safety, licences. Track expiry dates so renewals never lapse."}
+        actions={<><button className="btn" onClick={exportPdf} disabled={filtered.length === 0} title="Open a printable, branded PDF report">
             <Icon name="download" size={13} />Export PDF
           </button>
           {isAdmin && (
             <button className="btn accent" onClick={() => { setEditing(null); setShowForm(true); }}>
               <Icon name="plus" size={13} />Add document
             </button>
-          )}
-        </div>
-      </div>
+          )}</>}
+      />
 
       <div className="grid g-4" style={{ marginBottom: 18 }}>
         <KPI label="Documents on file" value={counts.total} sub="all categories" puck="cream" puckIcon="audit" />

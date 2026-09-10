@@ -1,7 +1,7 @@
 "use client";
 
 import Icon from "../Icon";
-import { KPI } from "../ui";
+import { KPI, PageHeader } from "../ui";
 import { money, moneyK, formatClassLabel } from "@/lib/format";
 import { openPrintWindow } from "./Reports";
 import QuickAccessRecent from "../QuickAccessRecent";
@@ -100,25 +100,9 @@ export default function ScreenTrust({ E, setCurrent, role, session, onOpenItem }
 
   return (
     <div className="page">
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">
-            {isTrustOnly
-              ? `Trust overview · ${DONORS.length} donor${DONORS.length === 1 ? "" : "s"} on file`
-              : `School overview · ${SCHOOLS.length} school${SCHOOLS.length === 1 ? "" : "s"}`}
-          </div>
-          <div className="page-title">
-            {isTrustOnly ? <>Trust <span className="amber">overview</span></>
-                         : <>School <span className="amber">overview</span></>}
-          </div>
-          <div className="page-sub">
-            {isTrustOnly
-              ? "Trust ledger roll-up — donors, donations, trust expenses."
-              : "Roll-up view across the school."}
-          </div>
-        </div>
-        <div className="page-actions">
-          <div className="segmented">
+      <PageHeader
+        sub={isTrustOnly ? "Trust ledger roll-up — donors, donations, trust expenses." : "Roll-up view across the school."}
+        actions={<><div className="segmented">
             {["This week", "This term", "YTD"].map((r, i) => (
               <button key={r} className={i === 0 ? "active" : ""}>
                 {r}
@@ -128,9 +112,8 @@ export default function ScreenTrust({ E, setCurrent, role, session, onOpenItem }
           <button className="btn accent" onClick={downloadBoardPack}>
             <Icon name="download" size={13} />
             Board pack PDF
-          </button>
-        </div>
-      </div>
+          </button></>}
+      />
 
       <QuickAccessRecent role={role} session={session} onOpenItem={onOpenItem} />
 

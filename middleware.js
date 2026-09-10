@@ -1,12 +1,22 @@
 // Edge middleware: gate every page (and most API routes) behind a valid
-// session. Public exceptions: /login, /api/auth/*, and Next.js internals.
+// session, and resolve which institution the request belongs to.
 //
 // We only verify the JWT here; per-role authorisation lives in the screens
 // and API routes (which call getSession from lib/auth.js to read the same
 // payload).
+//
+// Tenancy: this deployment serves two institutions out of one database, and
+// every query downstream is scoped to one of them. Middleware is the only
+// place that has both verified the session and not yet run any data access,
+// so it is where the tenant is decided and stamped onto the request as
+// `x-sirah-tenant`. We ALWAYS set that header — never pass an inbound one
+// through — so a client cannot hand itself another institution's data by
+// forging a header. See lib/tenant-context.js for the read side.
 
 import { NextResponse } from "next/server";
 import { SESSION_COOKIE, verifySessionEdge } from "@/lib/auth-edge";
+import { TENANT_HEADER, TENANT_HINT_COOKIE } from "@/lib/tenant-context-shared";
+import { normalizeTenant } from "@/lib/tenants";
 
 const PUBLIC_PATHS = [
   "/login",
@@ -36,13 +46,37 @@ function isPublic(pathname) {
   return false;
 }
 
+// Forward the request with the tenant stamped on. Cloning the headers and
+// handing them to NextResponse.next({ request }) is the supported way to add
+// a header that route handlers and server components can read.
+function withTenant(req, tenant) {
+  const headers = new Headers(req.headers);
+  headers.set(TENANT_HEADER, tenant);
+  return NextResponse.next({ request: { headers } });
+}
+
 export async function middleware(req) {
-  const { pathname } = req.nextUrl;
-  if (isPublic(pathname)) return NextResponse.next();
+  const { pathname, searchParams } = req.nextUrl;
+
+  if (isPublic(pathname)) {
+    // No session to read a tenant from. The login screen's School/College
+    // switch passes `?tenant=`, and the hint cookie remembers the last
+    // choice. Nothing privileged is reachable here, so an unauthenticated
+    // visitor picking their own tenant is the intended behaviour — it is
+    // how they choose which institution to sign in to.
+    const hinted =
+      searchParams.get("tenant") ||
+      req.cookies.get(TENANT_HINT_COOKIE)?.value;
+    return withTenant(req, normalizeTenant(hinted));
+  }
 
   const token = req.cookies.get(SESSION_COOKIE)?.value;
   const session = await verifySessionEdge(token);
-  if (session) return NextResponse.next();
+  if (session) {
+    // The tenant claim was signed into the JWT at login and has just been
+    // verified, so this is the authoritative value.
+    return withTenant(req, normalizeTenant(session.tenant));
+  }
 
   // For API routes, return 401 instead of redirecting (better client UX).
   if (pathname.startsWith("/api/")) {

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../Icon";
-import { KPI, EmptyState } from "../ui";
+import { KPI, EmptyState, ScreenToast as Toast, ModalShell, PageHeader } from "../ui";
 
 const PRIORITIES = [
   { k: "low",     label: "Low",     tone: "" },
@@ -18,43 +18,7 @@ const ROLE_LABEL = {
   trust_accountant: "Trust Accountant",
 };
 
-function Toast({ msg, tone, onClose }) {
-  if (!msg) return null;
-  const bg = tone === "ok" ? "var(--ok)" : tone === "err" ? "var(--err, #b13c1c)" : "var(--ink)";
-  return (
-    <div onClick={onClose} role="status" style={{
-      position: "fixed", bottom: 18, right: 18, zIndex: 9000,
-      background: bg, color: "#fff", padding: "9px 14px", borderRadius: 8,
-      fontSize: 12, fontWeight: 500, cursor: "pointer", maxWidth: 360,
-      boxShadow: "0 12px 30px -16px rgba(0,0,0,0.35)",
-    }}>{msg}</div>
-  );
-}
 
-function ModalShell({ title, sub, onClose, children, width = 520 }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  return (
-    <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "var(--overlay)",
-      display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
-    }}>
-      <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: width, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
-        <div className="card-head">
-          <div>
-            <div className="card-title">{title}</div>
-            {sub && <div className="card-sub">{sub}</div>}
-          </div>
-          <button className="icon-btn" onClick={onClose}><Icon name="x" size={14} /></button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 function Field({ label, children, hint }) {
   return (
@@ -371,7 +335,11 @@ export default function ScreenTasks({ E, refresh, role, session, searchFocus, cl
     <thead>
       <tr>
         <th style={{ width: 48 }}>#</th>
-        <th>Task</th>
+        {/* Seven columns share the table's 560px phone minimum, and every
+            other one claims its intrinsic width first — which left the task
+            itself 77px wide and nine lines tall. It is the column people
+            read, so it gets a floor of its own. */}
+        <th style={{ minWidth: 210 }}>Task</th>
         <th>Priority</th>
         <th>Due</th>
         <th>Yes / No</th>
@@ -385,18 +353,9 @@ export default function ScreenTasks({ E, refresh, role, session, searchFocus, cl
     <div className="page">
       <Toast msg={toast?.msg} tone={toast?.tone} onClose={() => setToast(null)} />
 
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">{isAdmin ? "Governance · Tasks" : "My work"}</div>
-          <div className="page-title">{isAdmin ? <>Task <span className="amber">allocation</span></> : <>My <span className="amber">tasks</span></>}</div>
-          <div className="page-sub">
-            {isAdmin
-              ? "Assign work to staff — they answer Yes/No with remarks"
-              : "Answer Yes or No, add remarks, or create a self-task — Admin can see your updates"}
-          </div>
-        </div>
-        <div className="page-actions">
-          {isAdmin && (
+      <PageHeader
+        sub={isAdmin ? "Assign work to staff — they answer Yes/No with remarks" : "Answer Yes or No, add remarks, or create a self-task — Admin can see your updates"}
+        actions={<>{isAdmin && (
             <button className="btn" onClick={() => loadTasks()} title="Reload teacher Yes/No and remarks">
               <Icon name="refresh" size={13} />Refresh
             </button>
@@ -409,9 +368,8 @@ export default function ScreenTasks({ E, refresh, role, session, searchFocus, cl
             <button className="btn accent" onClick={() => setShowAdd(true)}>
               <Icon name="plus" size={13} />Self task
             </button>
-          )}
-        </div>
-      </div>
+          )}</>}
+      />
 
       <div className="grid g-4" style={{ marginBottom: 14 }}>
         <KPI label={isAdmin ? "Total tasks" : "All tasks"} value={counts.total} sub="assigned" puck="mint" puckIcon="check" />
@@ -470,7 +428,7 @@ export default function ScreenTasks({ E, refresh, role, session, searchFocus, cl
                 </div>
               </div>
               <div style={{ overflowX: "auto" }}>
-                <table className="table">
+                <table className="table idx">
                   {taskTableHead}
                   <tbody>
                     {g.tasks.map(({ task, n }) => renderTaskRow(task, n, { showAssignee: false }))}
@@ -489,7 +447,7 @@ export default function ScreenTasks({ E, refresh, role, session, searchFocus, cl
             </div>
           </div>
           <div style={{ overflowX: "auto" }}>
-            <table className="table">
+            <table className="table idx">
               {taskTableHead}
               <tbody>
                 {rows.length === 0 && (

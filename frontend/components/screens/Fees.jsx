@@ -2,11 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../Icon";
-import { AvatarChip, FakeQR, StatusChip, UpiQR, buildUpiUri, SkeletonTable, EmptyState, SearchInput } from "../ui";
-import { money, moneyK, FEE_TYPES, feeTypeLabel, formatClassLabel } from "@/lib/format";
+import { AvatarChip, FakeQR, StatusChip, UpiQR, buildUpiUri, SkeletonTable, EmptyState, SearchInput, ScreenToast as Toast, PageHeader } from "../ui";
+import { money, moneyK, FEE_TYPES, feeTypeLabel, formatClassLabel, guardianPhone, guardianName } from "@/lib/format";
 import { resolveSchool, downloadPdf } from "@/lib/export";
 
-const DEMO_PARENT_PHONE = "+919876543210";
 
 // Customized bulk-reminder presets. `combo` = students who have BOTH fee types
 // pending (reminds both lines); `type` = a single fee type pending. `group`
@@ -810,7 +809,7 @@ export default function ScreenFees({ E, refresh, role, session, searchFocus, cle
       + `<style>td{padding:4px 6px;border-bottom:1px solid #eee}</style></head>`
       + `<body style="font-family:Arial,Helvetica,sans-serif;color:#111;max-width:900px;margin:24px auto;padding:0 16px">`
       + `<div style="text-align:center;border-bottom:2px solid #1f3a8a;padding-bottom:10px;margin-bottom:8px">`
-      + `<div style="font-size:18px;font-weight:800;color:#1f3a8a">${escapeHtml(school?.name || "Sirah Demo School")}</div>`
+      + `<div style="font-size:18px;font-weight:800;color:#1f3a8a">${escapeHtml(school?.name || "")}</div>`
       + `<div style="font-size:13px;margin-top:4px">Pending Fees · ${escapeHtml(termLabel)} + Admission + Transport · ${escapeHtml(scope)}</div></div>`
       + `<div style="font-size:12px;margin-bottom:4px">Grand total: ${m(gT + gA + gTr)} (${escapeHtml(termLabel)} ${m(gT)} · Admission ${m(gA)} · Transport ${m(gTr)})</div>`
       + sections
@@ -860,21 +859,38 @@ export default function ScreenFees({ E, refresh, role, session, searchFocus, cle
     input.click();
   };
 
-  // Receipt actions
-  const phoneFor = () => DEMO_PARENT_PHONE.replace(/[^0-9]/g, "");
+  // Receipt actions.
+  //
+  // The guardian's contact comes off the student record. There is no
+  // fallback number: sending a receipt to a hardcoded phone is worse than
+  // not sending it, so when a student has no number on file the action
+  // says so instead of silently opening an empty draft.
+  const selectedStudent = (E.ADDED_STUDENTS || []).find((st) => st.id === selected?.id) || null;
+  const guardianMobile = selectedStudent ? guardianPhone(selectedStudent) : null;
+  const guardianEmailAddress = selectedStudent?.parentEmail || null;
+  const guardianDisplayName = selectedStudent ? guardianName(selectedStudent) : "";
+  const signOff = [
+    school.name,
+    school.trustName && school.trustName !== school.name ? `Run by ${school.trustName}` : null,
+  ].filter(Boolean).join("\n");
+
   const sendWhatsApp = () => {
-    const text = encodeURIComponent(`Receipt for ${selected.name} (${selected.id}) · ₹${selected.amount} paid via ${method}. Thank you — Sirah Demo School.`);
-    window.open(`https://wa.me/${phoneFor()}?text=${text}`, "_blank");
+    if (!guardianMobile) return flash("No guardian phone on file for this student");
+    const text = encodeURIComponent(`Receipt for ${selected.name} (${selected.id}) · ₹${selected.amount} paid via ${method}. Thank you — ${school.name}.`);
+    window.open(`https://wa.me/91${guardianMobile}?text=${text}`, "_blank");
     flash("Opened WhatsApp");
   };
   const sendSms = () => {
-    window.open(`sms:${DEMO_PARENT_PHONE}?body=Receipt%20${selected.id}%20%E2%82%B9${selected.amount}%20paid`, "_self");
+    if (!guardianMobile) return flash("No guardian phone on file for this student");
+    window.open(`sms:+91${guardianMobile}?body=Receipt%20${selected.id}%20%E2%82%B9${selected.amount}%20paid`, "_self");
     flash("Opened SMS app");
   };
   const sendEmail = () => {
+    if (!guardianEmailAddress) return flash("No guardian email on file for this student");
     const subject = encodeURIComponent(`Fee receipt · ${selected.id} · ${selected.name}`);
-    const body = encodeURIComponent(`Dear Parent,\n\nThis is to confirm receipt of ₹${selected.amount} towards fees for ${selected.name} (${formatClassLabel(selected.cls)}, Reg ID ${selected.id}).\nMethod: ${method}\n\nThank you,\nSirah Demo School\nRun by Sirah Education Trust`);
-    window.open(`mailto:parent@example.com?subject=${subject}&body=${body}`, "_self");
+    const salutation = guardianDisplayName ? `Dear ${guardianDisplayName}` : "Dear Parent";
+    const body = encodeURIComponent(`${salutation},\n\nThis is to confirm receipt of ₹${selected.amount} towards fees for ${selected.name} (${formatClassLabel(selected.cls)}, Reg ID ${selected.id}).\nMethod: ${method}\n\nThank you,\n${signOff}`);
+    window.open(`mailto:${guardianEmailAddress}?subject=${subject}&body=${body}`, "_self");
     flash("Opened email draft");
   };
   // Sends the UPI QR (with amount + student details baked in) to the
@@ -971,11 +987,11 @@ export default function ScreenFees({ E, refresh, role, session, searchFocus, cle
     <div class="logo-row">
       <img src="${window.location.origin}/logo.png" alt="logo" />
       <div class="school-block">
-        <div class="school">SIRAH DEMO SCHOOL</div>
-        <div class="trust">Sirah Education Trust</div>
+        <div class="school">${escapeHtml((school.name || "").toUpperCase())}</div>
+        <div class="trust">${escapeHtml(school.trustName || "")}</div>
       </div>
     </div>
-    <div class="cell">Cell : 98765 43210</div>
+    <div class="cell">${escapeHtml(school.phone ? `Cell : ${school.phone}` : "")}</div>
 
     <div class="meta">
       <div class="row">
@@ -1027,22 +1043,9 @@ export default function ScreenFees({ E, refresh, role, session, searchFocus, cle
     <div className="page">
       <Toast toast={toast} />
 
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">Finance</div>
-          <div className="page-title">Fees &amp; payments</div>
-          <div className="page-sub">
-            What has been collected, what is still owed, and how long it has been outstanding.
-          </div>
-          <div style={{ display: "flex", gap: 8, color: "var(--ink-3)", fontSize: 12, marginTop: 14, flexWrap: "wrap" }}>
-            <span className="chip ok"><span className="dot" />{money(totals.collected)} collected (live)</span>
-            <span className="chip warn"><span className="dot" />{money(totals.pending)} pending</span>
-            <span className="chip bad"><span className="dot" />{money(totals.overdue)} overdue</span>
-          </div>
-          <FeeAgeing pending={scopedPending} />
-        </div>
-        <div className="page-actions">
-          {isParent ? (
+      <PageHeader
+        sub={"What has been collected, what is still owed, and how long it has been outstanding."}
+        actions={<>{isParent ? (
             /* Parent view is read-only — payments are taken at the school
                office; this screen just shows what's pending and what's been
                recorded against this child. */
@@ -1137,9 +1140,15 @@ export default function ScreenFees({ E, refresh, role, session, searchFocus, cle
                 <Icon name="megaphone" size={13} />Remind all
               </button>
             </>
-          )}
-        </div>
+          )}</>}
+      />
+
+      <div className="page-status">
+        <span className="chip ok"><span className="dot" />{money(totals.collected)} collected (live)</span>
+        <span className="chip warn"><span className="dot" />{money(totals.pending)} pending</span>
+        <span className="chip bad"><span className="dot" />{money(totals.overdue)} overdue</span>
       </div>
+      <FeeAgeing pending={scopedPending} />
 
       {!isParent && <CollectionSummary recent={scopedRecent} />}
 
@@ -1398,7 +1407,10 @@ export default function ScreenFees({ E, refresh, role, session, searchFocus, cle
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 500, fontSize: 13.5 }}>{selected.name}</div>
-                    <div style={{ fontSize: 11.5, color: "var(--ink-3)" }}>{formatClassLabel(selected.cls)} · {selected.id} · {DEMO_PARENT_PHONE}</div>
+                    <div style={{ fontSize: 11.5, color: "var(--ink-3)" }}>
+                      {formatClassLabel(selected.cls)} · {selected.id}
+                      {guardianMobile ? ` · +91 ${guardianMobile}` : " · no guardian phone on file"}
+                    </div>
                   </div>
                 </div>
                 <div className="hr" style={{ margin: "10px 0" }} />
@@ -1518,7 +1530,7 @@ export default function ScreenFees({ E, refresh, role, session, searchFocus, cle
                 const amt = payAmount.trim() === "" ? balance : Math.floor(Number(payAmount) || 0);
                 const upiUri = buildUpiUri({
                   upiId: finance.upi,
-                  payeeName: finance.upiPayeeName || "Sirah Demo School",
+                  payeeName: finance.upiPayeeName || school.name,
                   amount: amt,
                   note: `Fee ${selected.id}`,
                   transactionRef: selected.id,
@@ -1586,12 +1598,12 @@ export default function ScreenFees({ E, refresh, role, session, searchFocus, cle
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
                       <img src="/logo.png" alt="logo" style={{ width: 50, height: 50, objectFit: "contain", flexShrink: 0 }} />
                       <div style={{ flex: 1, textAlign: "center", color: navy }}>
-                        <div style={{ fontWeight: 800, fontSize: 14, letterSpacing: 0.3, lineHeight: 1.15 }}>SIRAH DEMO SCHOOL</div>
+                        <div style={{ fontWeight: 800, fontSize: 14, letterSpacing: 0.3, lineHeight: 1.15 }}>{(school.name || "").toUpperCase()}</div>
                         <div style={{ fontWeight: 700, fontSize: 10.5, marginTop: 2, letterSpacing: 0.3 }}>Sirah Education Trust</div>
                       </div>
                     </div>
                     <div style={{ textAlign: "center", color: navy }}>
-                      <div style={{ fontWeight: 600, fontSize: 10 }}>Cell : 98765 43210</div>
+                      <div style={{ fontWeight: 600, fontSize: 10 }}>{school.phone ? `Cell : ${school.phone}` : ""}</div>
                     </div>
 
                     <div style={{ marginTop: 8, fontSize: 11, color: navy, fontWeight: 600 }}>
@@ -1930,7 +1942,7 @@ function CollectionSummary({ recent }) {
             <button className="icon-btn" onClick={() => setDetail(null)}><Icon name="x" size={14} /></button>
           </div>
           <div style={{ overflowX: "auto" }}>
-            <table className="table">
+            <table className="table idx">
               <thead>
                 <tr>
                   <th style={{ width: 32 }}>#</th>
@@ -2126,8 +2138,8 @@ function PayOnlineModal({ order, busy, onClose, onConfirm }) {
             <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 4 }}>For {order.studentName} · {formatClassLabel(order.cls)}</div>
           </div>
           <div style={{ fontSize: 11.5, color: "var(--ink-3)", lineHeight: 1.5 }}>
-            In production this opens the Razorpay / PhonePe checkout. For this demo, click <b>Confirm payment</b> to simulate
-            a successful capture — the receipt will be generated and the fee marked paid.
+            Open the UPI app to pay, then click <b>Confirm payment</b> once the transfer
+            shows as complete. The receipt is generated and the fee marked paid immediately.
           </div>
           <a className="btn" href={order.payUrl} target="_blank" rel="noreferrer" style={{ justifyContent: "center" }}>
             <Icon name="upload" size={12} />Open UPI app
@@ -2615,30 +2627,6 @@ function AddFeeItemModal({ students, onClose, onSave }) {
 }
 
 // ---------- helper components ----------
-function Toast({ toast }) {
-  if (!toast) return null;
-  const bg = toast.tone === "bad" ? "var(--bad)" : toast.tone === "warn" ? "var(--warn)" : "var(--ok)";
-  return (
-    <div
-      style={{
-        position: "fixed",
-        top: 76,
-        left: "50%",
-        transform: "translateX(-50%)",
-        zIndex: 300,
-        background: bg,
-        color: "#fff",
-        padding: "10px 18px",
-        borderRadius: 999,
-        fontSize: 12.5,
-        fontWeight: 500,
-        boxShadow: "var(--shadow-lg)",
-      }}
-    >
-      {toast.msg}
-    </div>
-  );
-}
 
 function CollectMenu({ items, onPick, onClose }) {
   useEffect(() => {

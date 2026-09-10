@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../Icon";
-import { AvatarChip } from "../ui";
+import { AvatarChip, EmptyState, PageHeader } from "../ui";
 
 // Parent ↔ Staff direct messaging. Two layouts off the same component:
 //   - Parent: single locked-in thread with the admin desk (parent
@@ -118,36 +118,27 @@ export default function ScreenMessages({ role, session }) {
 
   return (
     <div className="page">
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">Communication</div>
-          <div className="page-title">
-            {isAdmin ? <>Parent <span className="amber">messages</span></> : <>Message <span className="amber">admin</span></>}
-          </div>
-          <div className="page-sub">
-            {isAdmin
-              ? `${threads.length} thread${threads.length === 1 ? "" : "s"} · ${totalUnread} unread`
-              : "Direct line to the school office. Replies usually within a working day."}
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        sub={isAdmin ? `${threads.length} thread${threads.length === 1 ? "" : "s"} · ${totalUnread} unread` : "Direct line to the school office. Replies usually within a working day."}
+      />
 
       <div className="card" style={{ overflow: "hidden", padding: 0 }}>
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: isAdmin ? "320px 1fr" : "1fr",
-          minHeight: 540,
-        }}>
+        <div
+          className={isAdmin ? "split-pane" : ""}
+          style={isAdmin ? { minHeight: 540 } : { minHeight: 540, display: "grid", gridTemplateColumns: "minmax(0, 1fr)" }}
+        >
           {isAdmin && (
-            <div style={{ borderRight: "1px solid var(--rule)", overflowY: "auto", maxHeight: 640 }}>
+            <div className="split-rail">
               <div style={{
                 padding: "10px 14px", borderBottom: "1px solid var(--rule)",
                 fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4, color: "var(--ink-3)",
               }}>Inbox · {threads.length}</div>
               {threads.length === 0 ? (
-                <div className="empty" style={{ padding: 24, fontSize: 12 }}>
-                  No parent messages yet. They'll appear here when a parent writes in.
-                </div>
+                <EmptyState
+                  icon="inbox"
+                  title="Inbox is empty"
+                  body="Messages from parents land here as soon as they write in, with the newest thread on top."
+                />
               ) : threads.map((t) => {
                 const active = t.otherId === activeId;
                 return (
@@ -193,8 +184,12 @@ export default function ScreenMessages({ role, session }) {
           {/* Conversation pane */}
           <div style={{ display: "flex", flexDirection: "column", minHeight: 540 }}>
             {isAdmin && !activeThread ? (
-              <div className="empty" style={{ padding: 60, flex: 1, display: "grid", placeItems: "center" }}>
-                Pick a thread on the left to read it.
+              <div style={{ padding: 20, flex: 1, display: "grid", placeItems: "center" }}>
+                <EmptyState
+                  icon="inbox"
+                  title="No thread selected"
+                  body="Pick a conversation on the left to read it and reply."
+                />
               </div>
             ) : (
               <>
@@ -215,10 +210,14 @@ export default function ScreenMessages({ role, session }) {
 
                 <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "16px", display: "flex", flexDirection: "column", gap: 8, maxHeight: 480 }}>
                   {messages.length === 0 ? (
-                    <div className="empty" style={{ padding: 30, alignSelf: "center", color: "var(--ink-3)", fontSize: 12 }}>
-                      {isAdmin
-                        ? "No messages in this thread yet."
-                        : "Start the conversation — anything you'd like the school office to know."}
+                    <div style={{ alignSelf: "center" }}>
+                      <EmptyState
+                        icon="send"
+                        title={isAdmin ? "Nothing in this thread yet" : "Start the conversation"}
+                        body={isAdmin
+                          ? "Once either side sends a message it appears here."
+                          : "Anything you would like the school office to know — fees, absence, a concern."}
+                      />
                     </div>
                   ) : messages.map((m) => {
                     const mine = m.senderId === session?.sub;
@@ -231,7 +230,7 @@ export default function ScreenMessages({ role, session }) {
                         background: mine ? "var(--accent)" : "var(--bg-2)",
                         color: mine ? "var(--accent-ink, #fff)" : "var(--ink)",
                         fontSize: 13, lineHeight: 1.45,
-                        boxShadow: mine ? "0 4px 14px -8px rgba(232, 83, 14, 0.4)" : "none",
+                        boxShadow: mine ? "0 4px 14px -8px color-mix(in srgb, var(--accent) 40%, transparent)" : "none",
                         whiteSpace: "pre-wrap", wordBreak: "break-word",
                       }}>
                         {m.message}

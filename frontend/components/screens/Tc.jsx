@@ -2,49 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../Icon";
-import { KPI } from "../ui";
+import { KPI, ScreenToast as Toast, EmptyState, ModalShell, PageHeader } from "../ui";
 import { formatClassLabel } from "@/lib/format";
 
 const STATUS_LABEL = { requested: "Requested", approved: "Approved", issued: "Issued", rejected: "Rejected" };
 const STATUS_TONE  = { requested: "", approved: "warn", issued: "ok", rejected: "bad" };
 
-function Toast({ msg, tone, onClose }) {
-  if (!msg) return null;
-  const bg = tone === "ok" ? "var(--ok)" : tone === "err" ? "var(--err, #b13c1c)" : "var(--ink)";
-  return (
-    <div onClick={onClose} role="status" style={{
-      position: "fixed", bottom: 18, right: 18, zIndex: 9000,
-      background: bg, color: "#fff", padding: "9px 14px", borderRadius: 8,
-      fontSize: 12, fontWeight: 500, cursor: "pointer", maxWidth: 360,
-      boxShadow: "0 12px 30px -16px rgba(0,0,0,0.35)",
-    }}>{msg}</div>
-  );
-}
 
-function ModalShell({ title, sub, onClose, children, width = 520 }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  return (
-    <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "var(--overlay)",
-      display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
-    }}>
-      <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: width, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
-        <div className="card-head">
-          <div>
-            <div className="card-title">{title}</div>
-            {sub && <div className="card-sub">{sub}</div>}
-          </div>
-          <button className="icon-btn" onClick={onClose}><Icon name="x" size={14} /></button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 function Field({ label, children, hint }) {
   return (
@@ -125,20 +89,16 @@ export default function ScreenTc({ E, refresh, role }) {
     <div className="page">
       <Toast msg={toast?.msg} tone={toast?.tone} onClose={() => setToast(null)} />
 
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">People · Records</div>
-          <div className="page-title">Transfer <span className="amber">Certificates</span></div>
-          <div className="page-sub">Request → approve → issue printable TC with auto serial number</div>
-        </div>
-        {canEdit && (
-          <div className="page-actions">
+      <PageHeader
+        sub={"Request → approve → issue printable TC with auto serial number"}
+        actions={<>{canEdit && (
+          <>
             <button className="btn accent" onClick={() => setShowAdd(true)}>
               <Icon name="plus" size={13} />New TC request
             </button>
-          </div>
-        )}
-      </div>
+          </>
+        )}</>}
+      />
 
       <div className="grid g-4" style={{ marginBottom: 14 }}>
         {(() => {
@@ -203,7 +163,15 @@ export default function ScreenTc({ E, refresh, role }) {
               <tr><th>TC #</th><th>Student</th><th>Class</th><th>Reason</th><th>Status</th><th>Serial</th><th></th></tr>
             </thead>
             <tbody>
-              {requests.length === 0 && <tr><td colSpan={7} className="empty">No TC requests yet.</td></tr>}
+              {requests.length === 0 && (
+                <tr><td colSpan={7} style={{ padding: 0 }}>
+                  <EmptyState
+                    icon="reports"
+                    title="No certificate requests"
+                    body="When a family requests a transfer certificate it appears here for approval, and issuing one archives the student automatically."
+                  />
+                </td></tr>
+              )}
               {requests.map((tc) => (
                 <tr key={tc.id}>
                   <td style={{ fontFamily: "var(--font-mono)", fontSize: 11.5 }}>{tc.id}</td>
@@ -249,7 +217,7 @@ export default function ScreenTc({ E, refresh, role }) {
         <AddTcModal students={E.ADDED_STUDENTS || []} onClose={() => setShowAdd(false)} onSubmit={handleAdd} />
       )}
       {printingTc && (
-        <PrintTcModal tc={printingTc} onClose={() => setPrintingTc(null)} />
+        <PrintTcModal tc={printingTc} school={E.SETTINGS?.school} onClose={() => setPrintingTc(null)} />
       )}
     </div>
   );
@@ -309,7 +277,20 @@ function AddTcModal({ students, onClose, onSubmit }) {
   );
 }
 
-function PrintTcModal({ tc, onClose }) {
+function PrintTcModal({ tc, school, onClose }) {
+  // Every identifying line on the certificate comes from the institution's
+  // own settings. This template used to carry the previous client's name and
+  // Puducherry address hardcoded, so a Chennai school printed a certificate
+  // naming a district it has never been in.
+  const inst = {
+    name: (school?.name || "").toUpperCase() || "—",
+    address: school?.address || "",
+    recognition: school?.recognition || "",
+    district: (school?.city || "").split(",")[0].trim().toUpperCase(),
+    firstLanguage: school?.firstLanguage || "TAMIL",
+    medium: school?.medium || "ENGLISH",
+    headTitle: school?.headTitle || "the Head of the Institution",
+  };
   const print = () => {
     const w = window.open("", "_blank", "width=820,height=1100");
     if (!w) return;
@@ -361,9 +342,9 @@ function PrintTcModal({ tc, onClose }) {
       <div class="head">
         <img src="${window.location.origin}/logo.png" alt="logo" />
         <div class="school">
-          <div class="school-name">SIRAH DEMO SCHOOL</div>
-          <div class="addr">No. 57, KAMARAJ SALAI POORANANKUPPAM PUDUCHERRY -605007</div>
-          <div class="reco">(RECOGNISED BY THE GOVT. OF PUDUCHERRY)</div>
+          <div class="school-name">${escape(inst.name)}</div>
+          <div class="addr">${escape(inst.address)}</div>
+          <div class="reco">${escape(inst.recognition)}</div>
         </div>
       </div>
 
@@ -377,11 +358,11 @@ function PrintTcModal({ tc, onClose }) {
 
       <div class="item">
         <div class="l">1. a) Name of the School</div>
-        <div class="r"><span class="colon">:</span><span class="val">SIRAH DEMO SCHOOL</span></div>
+        <div class="r"><span class="colon">:</span><span class="val">${escape(inst.name)}</span></div>
       </div>
       <div class="item subline">
         <div class="l">b) Name of the Education District / Revenue District</div>
-        <div class="r"><span class="colon">:</span><span class="val">PUDUCHERRY</span></div>
+        <div class="r"><span class="colon">:</span><span class="val">${escape(inst.district)}</span></div>
       </div>
       <div class="item">
         <div class="l">2. Name of the Pupil (in Block letters)</div>
@@ -461,19 +442,19 @@ function PrintTcModal({ tc, onClose }) {
         </thead>
         <tbody>
           <tr>
-            <td>SIRAH<br/>DEMO<br/>SCHOOL</td>
+            <td>${escape(inst.name)}</td>
             <td>${academicYear}</td>
             <td>${escape(tc.cls || "")}</td>
-            <td>TAMIL</td>
-            <td>ENGLISH</td>
+            <td>${escape(inst.firstLanguage)}</td>
+            <td>${escape(inst.medium)}</td>
           </tr>
         </tbody>
       </table>
 
       <div class="sign-block">
         <div class="col">
-          Signature of the Headmistress<br/>
-          With date and school seal
+          Signature of ${escape(inst.headTitle)}<br/>
+          With date and institution seal
         </div>
       </div>
 

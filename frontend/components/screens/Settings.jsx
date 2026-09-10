@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Icon from "../Icon";
+import { ScreenToast as Toast, EmptyState, PageHeader } from "../ui";
 import { formatClassLabel, parseHolidays, getWorkingDays } from "@/backend/lib/format.js";
 
 function normalizeSettings(raw) {
@@ -29,18 +30,20 @@ const SECTIONS = [
     key: "school",
     t: "Institution",
     fields: [
+      // Institution type is fixed per deployment, not a setting. The school
+      // and the college are separate tenants with separate students, staff,
+      // classes and fees; you choose which one you are signing in to at the
+      // login screen. Shown here read-only so it is obvious which set of
+      // records you are looking at.
       {
         k: "institutionType",
         label: "Institution type",
-        hint: "Switches the whole app between school and college vocabulary — classes become semesters, parents become guardians, and college mode adds credit-weighted GPA to Exams. No data is migrated; the same records are simply presented differently.",
-        options: [
-          { value: "school",  label: "School (Class I-XII, parents)" },
-          { value: "college", label: "College (Semesters, guardians, GPA)" },
-        ],
+        readOnly: true,
+        hint: "Set by the institution you signed in to. The school and the college hold entirely separate records — switch between them by signing in to the other one.",
       },
       { k: "name",        label: "Institution name" },
       { k: "city",        label: "City" },
-      { k: "programme",   label: "Programme / board", hint: "College: e.g. B.Sc Computer Science. School: e.g. CBSE." },
+      { k: "programme",   label: "Programme / board", hint: "College: e.g. B.E Computer Science and Engineering. School: e.g. CBSE." },
     ],
   },
   {
@@ -61,7 +64,7 @@ const SECTIONS = [
       { k: "feeCycle",     label: "Fee cycle" },
       // UPI ID + payee name drive the QR shown on the Fees · Collect screen
       // and the Pay-online checkout. Set both for the QR to be scannable.
-      { k: "upi",          label: "UPI ID",          hint: "e.g. sirahdemo@hdfc — used for the fees QR scanner" },
+      { k: "upi",          label: "UPI ID",          hint: "The VPA fee payments are collected into, e.g. yourschool@hdfcbank — printed into the fees QR code" },
       { k: "upiPayeeName", label: "UPI payee name",  hint: "Shown to the parent's UPI app (max 40 chars)" },
       { k: "gstPan",       label: "GST · PAN for invoices" },
     ],
@@ -98,17 +101,6 @@ const SECTIONS = [
   },
 ];
 
-function Toast({ msg, tone, onClose }) {
-  if (!msg) return null;
-  const bg = tone === "ok" ? "var(--ok)" : tone === "err" ? "var(--err, #b13c1c)" : "var(--ink)";
-  return (
-    <div onClick={onClose} role="status" style={{
-      position: "fixed", bottom: 18, right: 18, zIndex: 9000,
-      background: bg, color: "#fff", padding: "9px 14px", borderRadius: 8,
-      fontSize: 12, fontWeight: 500, cursor: "pointer", maxWidth: 360,
-    }}>{msg}</div>
-  );
-}
 
 const inputStyle = {
   marginTop: 4, width: "100%", fontSize: 13,
@@ -219,21 +211,15 @@ export default function ScreenSettings({ role, E, refresh }) {
 
   return (
     <div className="page">
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">System</div>
-          <div className="page-title">Settings</div>
-          <div className="page-sub">Trust-wide defaults. Individual schools can override finance and communication settings.</div>
-        </div>
-        <div className="page-actions">
-          <button className="btn" onClick={revert} disabled={busy}><Icon name="refresh" size={13} />Revert</button>
+      <PageHeader
+        sub={"Trust-wide defaults. Individual schools can override finance and communication settings."}
+        actions={<><button className="btn" onClick={revert} disabled={busy}><Icon name="refresh" size={13} />Revert</button>
           {canEdit && (
             <button className="btn accent" onClick={save} disabled={busy}>
               <Icon name="check" size={13} />{busy ? "Saving…" : "Save changes"}
             </button>
-          )}
-        </div>
-      </div>
+          )}</>}
+      />
 
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="tabs" role="tablist" aria-label="Settings category">
@@ -354,7 +340,11 @@ export default function ScreenSettings({ role, E, refresh }) {
             )}
           </div>
           {classes.length === 0 ? (
-            <div className="empty" style={{ padding: 16 }}>No classes yet. Add classes on the Classes screen first.</div>
+            <EmptyState
+              icon="book"
+              title="No classes defined"
+              body="Working days are set per class. Define your classes first and each one gets a row here."
+            />
           ) : (
             classes.map((c) => {
               const key = `workingDays_${c.n}`;
@@ -406,7 +396,11 @@ export default function ScreenSettings({ role, E, refresh }) {
                   <div className="lrow" key={it.k} style={{ alignItems: "flex-start" }}>
                     <div className="field" style={{ flex: 1, minWidth: 0 }}>
                       <label className="field-label" htmlFor={`set-${s.key}-${it.k}`}>{it.label}</label>
-                      {canEdit && it.options ? (
+                      {it.readOnly ? (
+                        <div className="field-static">
+                          {value === "college" ? "College" : value === "school" ? "School" : (value || "—")}
+                        </div>
+                      ) : canEdit && it.options ? (
                         <select
                           id={`set-${s.key}-${it.k}`}
                           className="select"

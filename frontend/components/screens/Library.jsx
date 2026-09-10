@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import Icon from "../Icon";
-import { KPI } from "../ui";
+import { KPI, ScreenToast as Toast, EmptyState, ModalShell, PageHeader } from "../ui";
 import { formatClassLabel } from "@/lib/format";
 
 // Standard 14-day loan period — matches what most school libraries use.
@@ -49,43 +49,7 @@ function inferColumnMap(headers) {
 }
 
 // ---------- toast & modal shell (same pattern used elsewhere in the app) ----
-function Toast({ msg, tone, onClose }) {
-  if (!msg) return null;
-  const bg = tone === "ok" ? "var(--ok)" : tone === "err" ? "var(--err, #b13c1c)" : "var(--ink)";
-  return (
-    <div onClick={onClose} role="status" style={{
-      position: "fixed", bottom: 18, right: 18, zIndex: 9000,
-      background: bg, color: "#fff", padding: "9px 14px", borderRadius: 8,
-      fontSize: 12, fontWeight: 500, cursor: "pointer", maxWidth: 360,
-      boxShadow: "0 12px 30px -16px rgba(0,0,0,0.35)",
-    }}>{msg}</div>
-  );
-}
 
-function ModalShell({ title, sub, onClose, children, width = 520 }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  return (
-    <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "var(--overlay)",
-      display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
-    }}>
-      <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: width, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
-        <div className="card-head">
-          <div>
-            <div className="card-title">{title}</div>
-            {sub && <div className="card-sub">{sub}</div>}
-          </div>
-          <button className="icon-btn" onClick={onClose}><Icon name="x" size={14} /></button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 function Field({ label, hint, children }) {
   return (
@@ -315,22 +279,10 @@ export default function ScreenLibrary({ E, refresh, role, session, searchFocus, 
     <div className="page">
       <Toast msg={toast?.msg} tone={toast?.tone} onClose={() => setToast(null)} />
 
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">{isBorrowerOnly ? "My family · Library" : "Operations · Library"}</div>
-          <div className="page-title">
-            {isBorrowerOnly
-              ? <>Library <span className="amber">books I borrowed</span></>
-              : <>Library <span className="amber">management</span></>}
-          </div>
-          <div className="page-sub">
-            {isParent  ? "Browse the school catalog · track books your child has borrowed." :
-             isTeacher ? "Browse the school catalog · track books you have borrowed." :
-                         "Books · loans · stock · borrowers"}
-          </div>
-        </div>
-        {canManage && (
-          <div className="page-actions">
+      <PageHeader
+        sub={isParent ? "Browse the school catalog · track books your child has borrowed." : isTeacher ? "Browse the school catalog · track books you have borrowed." : "Books · loans · stock · borrowers"}
+        actions={<>{canManage && (
+          <>
             <button className="btn" onClick={() => setShowImport(true)} title="Bulk-import books from an Excel/CSV file">
               <Icon name="upload" size={13} />Import Excel
             </button>
@@ -347,9 +299,9 @@ export default function ScreenLibrary({ E, refresh, role, session, searchFocus, 
             <button className="btn accent" onClick={() => setShowAddBook(true)}>
               <Icon name="plus" size={13} />Add book
             </button>
-          </div>
-        )}
-      </div>
+          </>
+        )}</>}
+      />
 
       {/* KPIs: managers see system-wide stock; borrowers see their own loans. */}
       {isBorrowerOnly ? (
@@ -759,10 +711,17 @@ function BooksTab({ books, activeByBook, canManage, onBorrow, onEdit, onRemove }
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={canManage ? 7 : 6} className="empty">
-                {books.length === 0
-                  ? "No books in the catalog yet. Click “Add book” to start."
-                  : "No matches for the current filter."}
+              <tr><td colSpan={canManage ? 7 : 6} style={{ padding: 0 }}>
+                <EmptyState
+                  icon="book"
+                  title={books.length === 0 ? "The catalog is empty" : "No books match this filter"}
+                  body={books.length === 0
+                    ? "Add books one at a time, or import the whole catalog from a spreadsheet, and lending switches on."
+                    : "Try a different category or clear the search."}
+                  action={books.length === 0 && canManage
+                    ? <button className="btn accent sm" onClick={() => setShowAddBook(true)}><Icon name="plus" size={12} />Add book</button>
+                    : null}
+                />
               </td></tr>
             )}
             {paged.map((b) => {
@@ -914,7 +873,13 @@ function LoansTab({ loans, canManage, onReturn, headingTitle = "Loans", headingS
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={colCount} className="empty">No loans match this filter.</td></tr>
+              <tr><td colSpan={colCount} style={{ padding: 0 }}>
+                <EmptyState
+                  icon="book"
+                  title="No loans match this filter"
+                  body="Switch between active, overdue and returned to see the rest of the lending history."
+                />
+              </td></tr>
             )}
             {filtered.map((l) => {
               const overdue = !l.returnedAt && new Date(l.dueAt) < new Date();
@@ -1236,7 +1201,7 @@ function ImportBooksModal({ onClose, onSubmit }) {
               </div>
             </div>
             <div style={{ maxHeight: 220, overflow: "auto", border: "1px solid var(--rule)", borderRadius: 7 }}>
-              <table className="table" style={{ fontSize: 11.5 }}>
+              <table className="table idx" style={{ fontSize: 11.5 }}>
                 <thead>
                   <tr>
                     <th>#</th>

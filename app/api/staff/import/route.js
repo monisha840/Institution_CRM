@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { addStaff, logAudit } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { readablePassword } from "@/lib/password";
 
 // Bulk-import staff (teachers + ops + interns) from a CSV/Excel that the
 // admin uploads on the Staff screen. Mirrors the Students importer: each
@@ -73,19 +74,16 @@ function newStaffId(taken) {
   return id;
 }
 
-// Deterministic per-teacher default password from the first name —
-// principal asked for "Aakash@123" style so the password is easy to
-// share verbally. First name's first letter uppercased, rest
-// lowercased, then "@123". Falls back to "Teacher@123" if the row
-// name is unparseable (empty / only punctuation).
-function derivePasswordFromName(name) {
-  const first = String(name || "").trim().split(/\s+/)[0] || "";
-  // Strip any non-letter junk (dots, initials like "S.K." would leave
-  // "S" which is still valid).
-  const cleaned = first.replace(/[^A-Za-z]/g, "");
-  if (!cleaned) return "Teacher@123";
-  const capitalised = cleaned.charAt(0).toUpperCase() + cleaned.slice(1).toLowerCase();
-  return `${capitalised}@123`;
+// A fresh random password per imported staff member.
+//
+// This used to derive the password from the person's first name
+// ("Aakash@123"), which made every account on the roster guessable from
+// the roster itself. The import already returns the plain passwords in a
+// download-CSV modal, so nothing is lost by making them random — the admin
+// still gets one readable list to hand out, and it stops being possible to
+// work out a colleague's password from their name.
+function derivePasswordFromName() {
+  return readablePassword();
 }
 
 export async function POST(req) {
@@ -159,9 +157,9 @@ export async function POST(req) {
       salary,
       attendance: 0,
       tasks: 0,
-      // Per-teacher derived password (Aakash@123 style) — addStaff
-      // uses this in place of COMMON_TEACHER_PASSWORD when set. Only
-      // applied when role === "Teacher" AND an email is present.
+      // One random password per imported teacher, collected here so the
+      // whole set can go into a single download-CSV after the import.
+      // Only applied when role === "Teacher" AND an email is present.
       defaultPassword: role === "Teacher" ? derivePasswordFromName(name) : undefined,
     };
 

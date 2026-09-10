@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Icon from "../Icon";
+import { EmptyState, PageHeader } from "../ui";
 
 // Catalogue of features the admin can grant / restrict per custom role.
 // Keep this list aligned with the canonical sidebar ids in Sidebar.jsx
@@ -172,12 +173,9 @@ export default function ScreenCustomRoles({ E, role, refresh }) {
   if (!isAdmin) {
     return (
       <div className="page">
-        <div className="page-head">
-          <div>
-            <div className="page-title">Custom roles</div>
-            <div className="page-sub">Only admin can configure custom roles.</div>
-          </div>
-        </div>
+        <PageHeader
+          sub={"Only admin can configure custom roles."}
+        />
       </div>
     );
   }
@@ -195,17 +193,9 @@ export default function ScreenCustomRoles({ E, role, refresh }) {
         }}>{toast.msg}</div>
       )}
 
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">Governance · Access</div>
-          <div className="page-title">Custom <span className="amber">roles</span></div>
-          <div className="page-sub">
-            Build new roles on top of the seven canonical ones — say,
-            "Mid-office" with view-only fees, or "Sports head" with full
-            access to Activities. Toggle View / Edit / Delete per feature.
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        sub={"Build new roles on top of the seven canonical ones — say, \"Mid-office\" with view-only fees, or \"Sports head\" with full access to Activities. Toggle View / Edit / Delete per feature."}
+      />
 
       <div className="grid g-12">
         <div className="card col-5">
@@ -236,7 +226,11 @@ export default function ScreenCustomRoles({ E, role, refresh }) {
             </button>
           </form>
           {roles.length === 0 ? (
-            <div className="empty" style={{ padding: 30 }}>No custom roles yet — create one to get started.</div>
+            <EmptyState
+              icon="users"
+              title="No custom roles yet"
+              body="Custom roles let you grant exactly the screens a job needs — a librarian, an accounts clerk — without using a built-in role."
+            />
           ) : (
             <div>
               {roles.map((r) => {
@@ -275,7 +269,11 @@ export default function ScreenCustomRoles({ E, role, refresh }) {
             </div>
           </div>
           {!activeRole ? (
-            <div className="empty" style={{ padding: 50 }}>Nothing selected.</div>
+            <EmptyState
+              icon="shield"
+              title="No role selected"
+              body="Pick a role on the left to review and change which screens it can reach."
+            />
           ) : (
             <div style={{ maxHeight: 620, overflowY: "auto" }}>
               {FEATURE_CATALOG.map((grp) => (

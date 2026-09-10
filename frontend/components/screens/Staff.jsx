@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../Icon";
-import { KPI, AvatarChip } from "../ui";
+import { KPI, AvatarChip, ScreenToast as Toast, EmptyState, ModalShell, PageHeader } from "../ui";
 import DocumentsPanel from "../DocumentsPanel";
 import CredentialsModal from "../CredentialsModal";
 import { resolveSchool, downloadPdf } from "@/lib/export";
@@ -14,25 +14,6 @@ const FILTERS = [
   { k: "intern", label: "Interns" },
 ];
 
-function Toast({ msg, tone, onClose }) {
-  if (!msg) return null;
-  const bg = tone === "ok" ? "var(--ok)" : tone === "err" ? "var(--err, #b13c1c)" : "var(--ink)";
-  return (
-    <div
-      role="status"
-      onClick={onClose}
-      style={{
-        position: "fixed", bottom: 18, right: 18, zIndex: 9000,
-        background: bg, color: "#fff",
-        padding: "9px 14px", borderRadius: 8, fontSize: 12, fontWeight: 500,
-        boxShadow: "0 12px 30px -16px rgba(0,0,0,0.35)", cursor: "pointer",
-        maxWidth: 360,
-      }}
-    >
-      {msg}
-    </div>
-  );
-}
 
 export default function ScreenStaff({ E, refresh, role, session, searchFocus, clearSearchFocus }) {
   const school = resolveSchool(E?.SETTINGS);
@@ -201,14 +182,9 @@ export default function ScreenStaff({ E, refresh, role, session, searchFocus, cl
 
   return (
     <div className="page">
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">People · Performance</div>
-          <div className="page-title">Staff & <span className="amber">Interns</span></div>
-          <div className="page-sub">Performance · attendance · tasks · interns rotations</div>
-        </div>
-        <div className="page-actions">
-          {canEdit && (
+      <PageHeader
+        sub={"Performance · attendance · tasks · interns rotations"}
+        actions={<>{canEdit && (
             <button className="btn" onClick={() => setShowImport(true)} title="Bulk-add staff from CSV / Excel">
               <Icon name="upload" size={13} />Import
             </button>
@@ -220,9 +196,8 @@ export default function ScreenStaff({ E, refresh, role, session, searchFocus, cl
             <button className="btn accent" onClick={() => setShowAdd(true)}>
               <Icon name="plus" size={13} />Add staff
             </button>
-          )}
-        </div>
-      </div>
+          )}</>}
+      />
 
       <div className="grid g-4" style={{ marginBottom: 14 }}>
         {(() => {
@@ -334,7 +309,7 @@ export default function ScreenStaff({ E, refresh, role, session, searchFocus, cl
             </div>
           </div>
           <div style={{ overflowX: "auto" }}>
-            <table className="table">
+            <table className="table idx">
               <thead>
                 <tr>
                   <th>#</th><th>Name</th><th>Role</th><th>Own attendance</th><th>Student perf</th><th>Score</th><th>Status</th>
@@ -344,10 +319,21 @@ export default function ScreenStaff({ E, refresh, role, session, searchFocus, cl
               <tbody>
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={canEdit ? 8 : 7} className="empty">
-                      {allStaff.length === 0
-                        ? "No staff added yet. Click “Add staff” to start."
-                        : `No ${filter} match the current filter.`}
+                    <td colSpan={canEdit ? 8 : 7} style={{ padding: 0 }}>
+                      {allStaff.length === 0 ? (
+                        <EmptyState
+                          icon="staff"
+                          title="No staff on file yet"
+                          body="The staff roster drives payroll, class allocation and attendance — add the first record to switch those on."
+                          action={canEdit ? <button className="btn accent sm" onClick={() => setShowAdd(true)}><Icon name="plus" size={12} />Add staff</button> : null}
+                        />
+                      ) : (
+                        <EmptyState
+                          icon="filter"
+                          title="Nobody matches this filter"
+                          body="Try a different department or role, or clear the search to see the whole roster."
+                        />
+                      )}
                     </td>
                   </tr>
                 )}
@@ -423,7 +409,11 @@ export default function ScreenStaff({ E, refresh, role, session, searchFocus, cl
           <div className="card">
             <div className="card-head"><div><div className="card-title">Today&apos;s attendance</div></div></div>
             {total === 0 ? (
-              <div className="empty">Mark staff in/out to see today&apos;s check-in summary.</div>
+              <EmptyState
+              icon="clock"
+              title="Nobody has checked in yet"
+              body="As staff mark themselves in or out, today's summary builds here — arrivals, late marks and who is still out."
+            />
             ) : (
               <div style={{ padding: "8px 14px 14px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
@@ -442,7 +432,11 @@ export default function ScreenStaff({ E, refresh, role, session, searchFocus, cl
           <div className="card">
             <div className="card-head"><div><div className="card-title">Intern rotations</div></div></div>
             {interns === 0 ? (
-              <div className="empty">No intern rotations set up yet.</div>
+              <EmptyState
+              icon="users"
+              title="No intern rotations"
+              body="Rotations track which department an intern is placed in, and for how long."
+            />
             ) : (
               <div style={{ padding: "8px 14px 14px", display: "flex", flexDirection: "column", gap: 6 }}>
                 {allStaff.filter((s) => /intern/i.test(s.role)).map((s) => (
@@ -458,7 +452,11 @@ export default function ScreenStaff({ E, refresh, role, session, searchFocus, cl
           <div className="card">
             <div className="card-head"><div><div className="card-title">Alerts</div></div></div>
             {lows === 0 ? (
-              <div className="empty">No alerts.</div>
+              <EmptyState
+              icon="check"
+              title="Nothing needs attention"
+              body="Expiring documents, missing records and pending approvals would be flagged here."
+            />
             ) : (
               <div style={{ padding: "8px 14px 14px", display: "flex", flexDirection: "column", gap: 6 }}>
                 {allStaff.filter((s) => s.status === "low").map((s) => (
@@ -606,33 +604,6 @@ function initialsOf(name) {
 }
 
 
-function ModalShell({ title, sub, onClose, children, width = 520 }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed", inset: 0, background: "var(--overlay)",
-        display: "grid", placeItems: "center", zIndex: 250, padding: 16,
-      }}
-    >
-      <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: width }}>
-        <div className="card-head">
-          <div>
-            <div className="card-title">{title}</div>
-            {sub && <div className="card-sub">{sub}</div>}
-          </div>
-          <button className="icon-btn" onClick={onClose}><Icon name="x" size={14} /></button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 // Bulk-import staff (teachers, ops, interns) from a CSV / Excel.
 // Mirrors the Students importer: file picker → spinner → green
@@ -648,13 +619,14 @@ function ImportStaffModal({ onClose, onSubmitCsv }) {
   // Minimum required columns: Name + Email. Phone / Role / Department /
   // Salary / Joining are all optional; missing values land as defaults.
   // For teachers (the most common case) the login is auto-provisioned
-  // from the Email column with a per-teacher password derived from the
-  // first name — Aakash → Aakash@123.
+  // For teachers (the most common case) the login is auto-provisioned from
+  // the Email column, each with its own generated password; the whole
+  // set comes back in a download-CSV once the import finishes.
   const sampleCsv =
     "Name,Email,Phone,Role,Department,Salary,Joining\n" +
-    "Aakash,aakash@school.com,+91 9876543210,Teacher,,,\n" +
-    "Priya Sharma,priya@school.com,9988776655,Teacher,,,\n" +
-    "Suresh Office,suresh@school.com,9000011111,Ops,Operations,22000,\n";
+    "Aakash Menon,aakash.menon@example.edu.in,+91 98400 12345,Teacher,Mathematics,,\n" +
+    "Priya Sharma,priya.sharma@example.edu.in,9988776655,Teacher,Science,,\n" +
+    "Suresh Nair,suresh.nair@example.edu.in,9000011111,Office Assistant,Administration,22000,\n";
   const downloadSample = () => {
     const blob = new Blob([sampleCsv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -795,7 +767,7 @@ function ImportStaffModal({ onClose, onSubmitCsv }) {
                 />
               </div>
               <div style={{ fontSize: 11.5, color: "var(--ink-3)" }}>
-                Need a starting point? <a onClick={downloadSample} style={{ color: "var(--accent)", cursor: "pointer", textDecoration: "underline" }}>Download a sample template</a>. Only <b>Name</b> + <b>Email</b> are required. Teacher logins are auto-created from the email column; the password is derived from the first name (<i>aakash → Aakash@123</i>) and shared in a download-CSV modal after import.
+                Need a starting point? <a onClick={downloadSample} style={{ color: "var(--accent)", cursor: "pointer", textDecoration: "underline" }}>Download a sample template</a>. Only <b>Name</b> + <b>Email</b> are required. Teacher logins are auto-created from the email column; each teacher gets their own generated password, all shared in a download-CSV once the import finishes.
               </div>
               {phase === "importing" && (
                 <div style={{
@@ -994,7 +966,7 @@ function AddStaffModal({ onClose, onSubmit }) {
             />
           </Field>
           <Field label="Email">
-            <input className="input" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="staff@school.com" />
+            <input className="input" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="name@yourschool.edu.in" />
           </Field>
         </div>
         <Field label="Salary (₹/month)">
@@ -1344,9 +1316,11 @@ function StaffProfileModal({ staff, awards, canEdit, onClose, onRefresh, onToast
             )}
 
             {awards.length === 0 ? (
-              <div className="empty" style={{ padding: 30, textAlign: "center" }}>
-                No awards yet.{canEdit && " Click Award teacher to recognise a contribution."}
-              </div>
+              <EmptyState
+                icon="spark"
+                title="No awards given yet"
+                body="Recognising good work puts it on the record — awards show on the staff member's profile."
+              />
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {awards.map((a) => {

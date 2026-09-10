@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Icon from "../Icon";
-import { KPI } from "../ui";
+import { KPI, EmptyState, PageHeader } from "../ui";
 import { resolveSchool, downloadPdf } from "@/lib/export";
 import { formatClassLabel } from "@/lib/format";
 
@@ -235,26 +235,17 @@ export default function ScreenRemarksRewards({ E, role, session, refresh }) {
         }}>{toast.msg}</div>
       )}
 
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">People · Recognition</div>
-          <div className="page-title">Remarks &amp; <span className="amber">rewards</span></div>
-          <div className="page-sub">
-            Recognise positive behaviour and capture concerns — for both students and staff.
-            Every entry is permanent and visible to the people it concerns.
-          </div>
-        </div>
-        <div className="page-actions">
-          <button className="btn" onClick={exportPdf} disabled={filtered.length === 0} title="Open a printable, branded PDF report">
+      <PageHeader
+        sub={"Recognise positive behaviour and capture concerns — for both students and staff. Every entry is permanent and visible to the people it concerns."}
+        actions={<><button className="btn" onClick={exportPdf} disabled={filtered.length === 0} title="Open a printable, branded PDF report">
             <Icon name="download" size={13} />Export PDF
           </button>
           {canWrite && (
             <button className="btn accent" onClick={() => setShowForm(true)}>
               <Icon name="plus" size={13} />New entry
             </button>
-          )}
-        </div>
-      </div>
+          )}</>}
+      />
 
       <div className="grid g-4" style={{ marginBottom: 18 }}>
         <KPI label="Total entries" value={counts.total} sub="this term" puck="cream" puckIcon="audit" />
@@ -305,7 +296,11 @@ export default function ScreenRemarksRewards({ E, role, session, refresh }) {
           </div>
         </div>
         {filtered.length === 0 ? (
-          <div className="empty" style={{ padding: 36 }}>No entries match the filters.</div>
+          <EmptyState
+            icon="shield"
+            title="No entries match these filters"
+            body="Switch between remarks and rewards, or pick a different class to see more."
+          />
         ) : (
           <div>
             {paged.map((r) => (

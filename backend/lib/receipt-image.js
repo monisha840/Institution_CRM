@@ -21,12 +21,16 @@ function dot(s, max) {
 
 // Render the full receipt to a PNG buffer. Returns a base64 data-URI string
 // that the WhatsApp Cloud / Evolution API will accept directly as `media`.
+// Identity defaults are empty on purpose. Every caller passes the
+// institution's real details, and a receipt that omits a line it does not
+// know is correct; one that prints a plausible-looking placeholder address
+// is a document asserting something false.
 export function renderReceiptPng({
-  schoolName = "SIRAH DEMO SCHOOL",
-  trustName  = "Sirah Education Trust",
-  regNo      = "SIS/2026",
-  address    = "No.45, MG Road, Chennai - 600 001.",
-  phone      = "9876 543 210",
+  schoolName = "",
+  trustName  = "",
+  regNo      = "",
+  address    = "",
+  phone      = "",
   // receipt-specific
   admissionNo,
   studentName,

@@ -2,20 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Icon from "../Icon";
+import { ScreenToast as Toast, EmptyState, PageHeader } from "../ui";
 
 const PUCKS = ["sky", "mint", "peach", "cream", "ink"];
 
-function Toast({ msg, tone, onClose }) {
-  if (!msg) return null;
-  const bg = tone === "ok" ? "var(--ok)" : tone === "err" ? "var(--err, #b13c1c)" : "var(--ink)";
-  return (
-    <div onClick={onClose} role="status" style={{
-      position: "fixed", bottom: 18, right: 18, zIndex: 9000,
-      background: bg, color: "#fff", padding: "9px 14px", borderRadius: 8,
-      fontSize: 12, fontWeight: 500, cursor: "pointer",
-    }}>{msg}</div>
-  );
-}
 
 export default function ScreenSchools({ E, role }) {
   const fallback = E?.SCHOOLS || [];
@@ -70,19 +60,13 @@ export default function ScreenSchools({ E, role }) {
 
   return (
     <div className="page">
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">Trust · {schools.length} {schools.length === 1 ? "school" : "schools"}</div>
-          <div className="page-title">Schools <span className="amber">at a glance</span></div>
-          <div className="page-sub">Switch between schools. Each one has its own fees, staff, and academic tracker — but reports roll up here.</div>
-        </div>
-        <div className="page-actions">
-          <button className="btn"><Icon name="download" size={13} />Export</button>
+      <PageHeader
+        sub={"Switch between schools. Each one has its own fees, staff, and academic tracker — but reports roll up here."}
+        actions={<><button className="btn"><Icon name="download" size={13} />Export</button>
           {canEdit && (
             <button className="btn accent" onClick={() => setShowNew(true)}><Icon name="plus" size={13} />Add school</button>
-          )}
-        </div>
-      </div>
+          )}</>}
+      />
 
       {showNew && (
         <div className="card" style={{ marginBottom: 14 }}>
@@ -114,7 +98,11 @@ export default function ScreenSchools({ E, role }) {
 
       {schools.length === 0 && (
         <div className="card" style={{ marginBottom: 18 }}>
-          <div className="empty" style={{ padding: 60 }}>No schools added yet. Click "Add school" to start.</div>
+          <EmptyState
+            icon="school"
+            title="No schools added yet"
+            body="A trust can run several schools. Add each one to see its enrolment, collection and staffing side by side."
+          />
         </div>
       )}
 

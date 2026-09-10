@@ -7,7 +7,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Icon from "../Icon";
-import { KPI, SkeletonTable } from "../ui";
+import { KPI, SkeletonTable, PageHeader } from "../ui";
 import { formatClassLabel } from "@/lib/format";
 
 const ROOT_CAUSE_CATEGORIES = [
@@ -96,12 +96,9 @@ export default function ScreenScaleAdmin({ E, role, session, refresh }) {
   if (!isAuthorised) {
     return (
       <div className="page">
-        <div className="page-head">
-          <div>
-            <div className="page-title">SCALE admin</div>
-            <div className="page-sub">Only admin / principal / academic director can review SCALE telemetry.</div>
-          </div>
-        </div>
+        <PageHeader
+          sub={"Only admin / principal / academic director can review SCALE telemetry."}
+        />
       </div>
     );
   }
@@ -118,24 +115,15 @@ export default function ScreenScaleAdmin({ E, role, session, refresh }) {
         }}>{toast.msg}</div>
       )}
 
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">Governance · SCALE</div>
-          <div className="page-title">SCALE <span className="amber">admin</span></div>
-          <div className="page-sub">
-            Four telemetry metrics from real session data — objective, hard to manipulate.
-            Use them to evaluate <strong>teaching</strong>, not just learning. Below: weaker-student support workflow.
-          </div>
-        </div>
-        <div className="page-actions">
-          <select className="select" value={windowDays} onChange={(e) => setWindowDays(Number(e.target.value))}>
+      <PageHeader
+        sub={<>Four telemetry metrics from real session data — objective, hard to manipulate. Use them to evaluate <strong>teaching</strong>, not just learning. Below: weaker-student support workflow.</>}
+        actions={<><select className="select" value={windowDays} onChange={(e) => setWindowDays(Number(e.target.value))}>
             <option value={7}>Last 7 days</option>
             <option value={30}>Last 30 days</option>
             <option value={90}>Last 90 days</option>
             <option value={180}>Last term</option>
-          </select>
-        </div>
-      </div>
+          </select></>}
+      />
 
       <div className="grid g-4" style={{ marginBottom: 14 }}>
         <KPI

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../Icon";
 import { resolveSchool, downloadPdf } from "@/lib/export";
-import { KPI, AvatarChip, EmptyState, Funnel, SectionHeader } from "../ui";
+import { KPI, AvatarChip, EmptyState, Funnel, SectionHeader, ScreenToast as Toast, ModalShell, PageHeader } from "../ui";
 import { formatClassLabel } from "@/lib/format";
 
 const SOURCES = ["Website", "Walk-in", "Referral", "Phone", "Instagram", "Facebook", "Google", "Other"];
@@ -14,44 +14,7 @@ const COLUMNS = [
   { s: "Rejected",  tone: "bad",  desc: "Not a fit · archived" },
 ];
 
-function Toast({ msg, tone, onClose }) {
-  if (!msg) return null;
-  return (
-    <div className="toast-stack">
-      <div className={`toast ${tone === "err" ? "bad" : "ok"}`} role="status" onClick={onClose} style={{ cursor: "pointer" }}>
-        <span className="toast-ico" aria-hidden="true">
-          <Icon name={tone === "err" ? "x" : "check"} size={12} stroke={2.4} />
-        </span>
-        <div className="toast-title" style={{ flex: 1 }}>{msg}</div>
-      </div>
-    </div>
-  );
-}
 
-function ModalShell({ title, sub, onClose, children, width = 480 }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  return (
-    <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "var(--overlay)",
-      display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
-    }}>
-      <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: width, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
-        <div className="card-head">
-          <div>
-            <div className="card-title">{title}</div>
-            {sub && <div className="card-sub">{sub}</div>}
-          </div>
-          <button className="icon-btn" onClick={onClose}><Icon name="x" size={14} /></button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 function Field({ label, children, hint }) {
   return (
@@ -211,26 +174,17 @@ export default function ScreenEnquiries({ E, refresh, role, session, searchFocus
 
   return (
     <div className="page">
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">Admissions</div>
-          <div className="page-title">Admission pipeline</div>
-          <div className="page-sub">
-            Every enquiry from first contact to confirmed admission — move a card forward and the
-            parent record follows automatically.
-          </div>
-        </div>
-        <div className="page-actions">
-          <button className="btn" onClick={exportPdf} disabled={data.length === 0} title="Open a printable, branded PDF report">
+      <PageHeader
+        sub={"Every enquiry from first contact to confirmed admission — move a card forward and the parent record follows automatically."}
+        actions={<><button className="btn" onClick={exportPdf} disabled={data.length === 0} title="Open a printable, branded PDF report">
             <Icon name="download" size={13} />Export PDF
           </button>
           {canEdit && (
             <button className="btn accent" onClick={() => setShowAdd(true)}>
               <Icon name="plus" size={13} />New enquiry
             </button>
-          )}
-        </div>
-      </div>
+          )}</>}
+      />
 
       <div className="grid g-4" style={{ marginBottom: 14 }}>
         {(() => {
@@ -369,7 +323,7 @@ export default function ScreenEnquiries({ E, refresh, role, session, searchFocus
       </div>
 
       {showAdd && canEdit && (
-        <NewEnquiryModal classes={classes} onClose={() => setShowAdd(false)} onSubmit={handleAdd} />
+        <NewEnquiryModal classes={classes} school={school} onClose={() => setShowAdd(false)} onSubmit={handleAdd} />
       )}
       {credModal && (
         <ParentCredentialsModal
@@ -506,7 +460,7 @@ function ageFromDob(dob) {
   return years >= 0 && years < 120 ? years : "";
 }
 
-function NewEnquiryModal({ classes, onClose, onSubmit }) {
+function NewEnquiryModal({ classes, school, onClose, onSubmit }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [form, setForm] = useState({
@@ -556,7 +510,7 @@ function NewEnquiryModal({ classes, onClose, onSubmit }) {
   );
 
   return (
-    <ModalShell title="New admission enquiry" sub="Sirah Demo School · Chennai, Tamil Nadu" onClose={onClose} width={560}>
+    <ModalShell title="New admission enquiry" sub={[school?.name, school?.city].filter(Boolean).join(" · ")} onClose={onClose} width={560}>
       <form onSubmit={submit} className="card-body" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
         <SectionHead>Student details</SectionHead>

@@ -8,6 +8,10 @@
 import fs from "fs";
 import path from "path";
 import { formatClassLabel } from "./format.js";
+import { currentTenant } from "./tenant-context.js";
+import { guardianEmail } from "./accounts.js";
+import { readablePassword } from "./password.js";
+import { institutionTypeFor } from "./institution.js";
 import {
   supabase, supabaseEnabled,
   toStudent, toPendingFee, toStaff, toInventory, toBroadcast, toTemplate,
@@ -51,7 +55,14 @@ export const BACKEND = supabaseEnabled ? "supabase" : "file";
 // File-store helpers (only used when supabaseEnabled === false)
 // ----------------------------------------------------------------------------
 const DATA_DIR = path.join(process.cwd(), "data");
-const DB_PATH = path.join(DATA_DIR, "db.json");
+
+// One file per institution. The file store is the zero-config fallback used
+// when Supabase isn't configured, and it has to keep the two tenants apart
+// for exactly the same reason the database does — a shared db.json would put
+// the college's students on the school's roster.
+function dbPathFor(tenant) {
+  return path.join(DATA_DIR, `db.${tenant}.json`);
+}
 
 // True when the JSON file store can actually be written. Serverless platforms
 // (Vercel, Lambda) mount the deployment read-only, so falling back to the file
@@ -95,27 +106,28 @@ const EMPTY_DB = {
 // Returns false when the JSON store cannot be created — a serverless host
 // mounts the deployment read-only. Callers treat that as "no file store" and
 // rely on Supabase, which is the source of truth whenever it is configured.
-function fileEnsure() {
+function fileEnsure(dbPath) {
   if (!fileStoreWritable()) return false;
   try {
     if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-    if (!fs.existsSync(DB_PATH)) fs.writeFileSync(DB_PATH, JSON.stringify(EMPTY_DB, null, 2));
+    if (!fs.existsSync(dbPath)) fs.writeFileSync(dbPath, JSON.stringify(EMPTY_DB, null, 2));
     return true;
   } catch {
     return false;
   }
 }
 export function fileRead() {
+  const dbPath = dbPathFor(currentTenant());
   // No writable store (serverless): hand back the empty shape so callers that
   // merge file rows into a Supabase result still work on their normal path.
-  if (!fileEnsure()) return structuredClone(EMPTY_DB);
-  const raw = fs.readFileSync(DB_PATH, "utf8");
+  if (!fileEnsure(dbPath)) return structuredClone(EMPTY_DB);
+  const raw = fs.readFileSync(dbPath, "utf8");
   const data = JSON.parse(raw);
   let touched = false;
   for (const k of Object.keys(EMPTY_DB)) {
     if (!(k in data)) { data[k] = EMPTY_DB[k]; touched = true; }
   }
-  if (touched) fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+  if (touched) fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
   return data;
 }
 // Mirrors state into the local JSON store. On a read-only filesystem this is a
@@ -125,9 +137,10 @@ export function fileRead() {
 // "ENOENT: no such file or directory, mkdir '/var/task/data'" on Vercel even
 // though the row reached the database.
 export function fileWrite(data) {
-  if (!fileEnsure()) return false;
+  const dbPath = dbPathFor(currentTenant());
+  if (!fileEnsure(dbPath)) return false;
   try {
-    fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+    fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
     return true;
   } catch {
     return false;
@@ -141,12 +154,19 @@ export function fileWrite(data) {
 // formatClassLabel(). 11 classes: PRE-MONT (13), MONT I (14),
 // MONT II (15), then I–VIII (1–8).
 const STATIC_EMPTIES = {
-  classes: [
-    { n: 13 }, { n: 14 }, { n: 15 },
-    { n: 1 }, { n: 2 }, { n: 3 }, { n: 4 }, { n: 5 }, { n: 6 }, { n: 7 }, { n: 8 },
-  ].map((c) => ({
-    n: c.n, label: formatClassLabel(String(c.n)), sections: ["A"], students: 0,
-  })),
+  // Labels depend on the tenant (Class V vs Semester 5), and this object is
+  // built at module load — before any request, so before there is a tenant to
+  // ask about. Kept as a getter so the labels are resolved per access, at
+  // which point currentTenant() has a real answer.
+  get classes() {
+    const type = institutionTypeFor(currentTenant());
+    return [
+      { n: 13 }, { n: 14 }, { n: 15 },
+      { n: 1 }, { n: 2 }, { n: 3 }, { n: 4 }, { n: 5 }, { n: 6 }, { n: 7 }, { n: 8 },
+    ].map((c) => ({
+      n: c.n, label: formatClassLabel(String(c.n), type), sections: ["A"], students: 0,
+    }));
+  },
   kpis: {
     students: { value: 0, delta: "", deltaDir: "", sub: "" },
     collected: { value: 0, delta: "", deltaDir: "", sub: "" },
@@ -209,7 +229,7 @@ async function safeSelect(table, build) {
 // recent_fees, students…) must be fetched in 1000-row pages or the register /
 // totals silently truncate. Do NOT use for queries that apply their own
 // .limit() — the .range() here would override it.
-async function safeSelectAll(table, build) {
+async function safeSelectAll(table, build, ceiling = Infinity) {
   const PAGE = 1000;
   let all = [];
   let from = 0;
@@ -222,6 +242,14 @@ async function safeSelectAll(table, build) {
       all = all.concat(rows);
       if (rows.length < PAGE) break;
       from += PAGE;
+      if (all.length >= ceiling) {
+        // A stated ceiling, reached. Say so — the whole reason this
+        // function exists is that the previous silent 1000-row cut was
+        // invisible until someone counted the rows on a screen.
+        console.warn(`[db] ${table}: stopped at the ${ceiling}-row ceiling; older rows are fetched per-screen`);
+        all = all.slice(0, ceiling);
+        break;
+      }
     }
     return all;
   } catch (e) {
@@ -230,11 +258,41 @@ async function safeSelectAll(table, build) {
   }
 }
 
+// How far back the shell payload carries the per-student time series.
+//
+// These tables grow by (students x school days), so they pass a thousand
+// rows within a fortnight and keep going. PostgREST caps a single response
+// at 1000 rows, which meant `daily_logs` quietly arrived holding the five
+// most recent days no matter what the caller asked for — and a `.limit(2000)`
+// on the query did nothing, because the server cap wins.
+//
+// So the bound is now a date, not a row count: it means the same thing as
+// the roll grows, and the screens that need real history already fetch
+// their own range (Attendance via /api/academic/attendance, a student's
+// record via /api/students/[id]/report).
+const SHELL_WINDOW_DAYS = {
+  daily_logs: 7,            // Dashboard's "today", Academic's "last 7 days"
+  transport_attendance: 7,  // the boarding board only shows recent runs
+};
+
+function windowStart(days) {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - days);
+  return d.toISOString().slice(0, 10);
+}
+
 // Run an array of async tasks in batches of `batchSize`. The Supabase JS
 // client / PostgREST silently drops some queries when too many run in
 // parallel against a single project (we hit it at ~16 concurrent), so we
 // chunk to a safe size and gather the results in order.
-async function runBatched(tasks, batchSize = 4) {
+//
+// Eight, not four: the shell issues 26 queries, so a batch of four meant
+// seven sequential round trips and roughly a second of pure latency each.
+// Eight halves the rounds and measured ~20% faster end to end, with row
+// counts identical across eight consecutive fetches — the failure mode
+// here is a silently missing collection, so it was checked rather than
+// assumed. Still well under the ~16 where drops start.
+async function runBatched(tasks, batchSize = 8) {
   const out = new Array(tasks.length);
   for (let i = 0; i < tasks.length; i += batchSize) {
     const slice = tasks.slice(i, i + batchSize);
@@ -252,28 +310,39 @@ export async function readAllData() {
       () => safeSelectAll("recent_fees",  (q) => q.order("paid_at",    { ascending: false })),
       () => safeSelect("complaints",   (q) => q.order("created_at", { ascending: false })),
       () => safeSelect("enquiries",    (q) => q.order("created_at", { ascending: false })),
-      () => safeSelect("daily_logs",   (q) => q.order("posted_at",  { ascending: false })),
-      () => safeSelect("routes",       (q) => q.order("created_at", { ascending: false })),
+      () => safeSelectAll("daily_logs",
+        (q) => q.gte("date", windowStart(SHELL_WINDOW_DAYS.daily_logs))
+                .order("posted_at", { ascending: false })),
+      () => safeSelectAll("routes",    (q) => q.order("created_at", { ascending: false })),
       () => safeSelect("audit_log",    (q) => q.order("created_at", { ascending: false }).limit(100)),
       () => safeSelect("activities",   (q) => q.order("created_at", { ascending: false }).limit(50)),
-      () => safeSelect("classes",      (q) => q.order("n",          { ascending: true })),
-      () => safeSelect("staff",        (q) => q.order("created_at", { ascending: false })),
-      () => safeSelect("inventory",    (q) => q.order("created_at", { ascending: false })),
+      () => safeSelectAll("classes",   (q) => q.order("n",          { ascending: true })),
+      () => safeSelectAll("staff",     (q) => q.order("created_at", { ascending: false })),
+      () => safeSelectAll("inventory", (q) => q.order("created_at", { ascending: false })),
       () => safeSelect("inventory_movements", (q) => q.order("at",  { ascending: false }).limit(30)),
       () => safeSelect("broadcasts",   (q) => q.order("sent_at",    { ascending: false }).limit(50)),
       () => safeSelect("message_templates", (q) => q.order("created_at", { ascending: false })),
       () => safeSelect("recipient_lists",   (q) => q.order("created_at", { ascending: false })),
       () => safeSelect("donors",       (q) => q.order("created_at", { ascending: false })),
       () => safeSelect("campaigns",    (q) => q.order("created_at", { ascending: false })),
-      () => safeSelect("transport_attendance", (q) => q.order("date", { ascending: false }).limit(2000)),
+      () => safeSelectAll("transport_attendance",
+        (q) => q.gte("date", windowStart(SHELL_WINDOW_DAYS.transport_attendance))
+                .order("date", { ascending: false })),
       // New tables — see schema.sql additions.
-      () => safeSelect("timetable",            (q) => q.order("cls",        { ascending: true })),
-      () => safeSelect("library",              (q) => q.order("added_at",   { ascending: false })),
-      () => safeSelect("library_loans",        (q) => q.order("borrowed_at",{ ascending: false }).limit(2000)),
+      // The grid is only correct if every slot is present, and a full week
+      // across every cohort is comfortably past a thousand rows.
+      () => safeSelectAll("timetable",         (q) => q.order("cls",        { ascending: true })),
+      () => safeSelectAll("library",           (q) => q.order("added_at",   { ascending: false })),
+      () => safeSelectAll("library_loans",     (q) => q.order("borrowed_at",{ ascending: false })),
       () => safeSelect("inventory_categories", (q) => q.order("created_at", { ascending: true })),
       () => safeSelect("exams",                (q) => q.order("created_at", { ascending: false })),
-      () => safeSelect("exam_marks",           (q) => q.order("recorded_at",{ ascending: false }).limit(5000)),
-      () => safeSelect("teacher_attendance",   (q) => q.order("date",       { ascending: false }).limit(2000)),
+      // Marks are read per exam by the Exams screen, so the ceiling is a
+      // row count rather than a date. Paged, so it is the stated number
+      // rather than whatever a single response happened to fit.
+      () => safeSelectAll("exam_marks",        (q) => q.order("recorded_at",{ ascending: false }), 3000),
+      // One row per staff member per working day — small enough to carry
+      // whole, but past a thousand within two months.
+      () => safeSelectAll("teacher_attendance", (q) => q.order("date",      { ascending: false })),
     ]);
     const stopMap = pickupStopsSafe();
     const eveningStopMap = pickupStopsEveningSafe();
@@ -299,14 +368,20 @@ export async function readAllData() {
       students: 0,
     });
     const liveClasses = cls.map(mapClassRow);
-    // Union of: live Supabase classes + file fallback + STATIC defaults.
-    // Deduped by class number, with later sources only filling gaps. This
-    // way a class auto-created on first admission shows up alongside the
-    // built-in 1-8 list instead of replacing it. Subjects merge from any
-    // source that has them (file overlay when Supabase column is missing).
+    // Union of the live Supabase classes and the file fallback, deduped by
+    // class number, so a class auto-created on first admission shows up
+    // alongside the configured list rather than replacing it. Subjects
+    // merge from whichever source has them.
+    //
+    // The bundled STATIC_EMPTIES list joins in only when neither source has
+    // anything — it is a first-run fallback. Merged unconditionally it
+    // added pre-school buckets (PRE-MONT, MONT I, MONT II) to a school that
+    // starts at Class I, and Class 1-8 to a college that runs semesters.
     const fileClasses = (fileDbSafe().classes || []).map(mapClassRow);
     const classMap = new Map();
-    for (const list of [liveClasses, fileClasses, STATIC_EMPTIES.classes]) {
+    const configured = [liveClasses, fileClasses].filter((l) => l && l.length);
+    const sources = configured.length ? configured : [STATIC_EMPTIES.classes];
+    for (const list of sources) {
       for (const c of list) {
         const row = mapClassRow(c);
         const key = Number(row.n);
@@ -448,8 +523,8 @@ export async function readAllData() {
       // App-wide settings (trust identity, finance, communication, security)
       // — exposed to the client so every screen's CSV / PDF export can
       // stamp the right school name on the header. Falls back to {} so
-      // exports default to the bundled "Sirah Demo School" if
-      // settings haven't been written yet.
+      // exports fall back to the tenant registry when no settings row
+      // has been written yet.
       appSettings: await readSettings().catch(() => ({})),
       teacherAttendance: (() => {
         // Supabase is the source of truth; union any file-store rows not present.
@@ -857,7 +932,7 @@ async function writeTransportAssignmentsForStudent(student, actor) {
 // (Roman numerals), pre-school buckets as "PRE-MONT" / "MONT I" / "MONT II".
 // Storage shape (cls = "N-A") is unaffected — this is presentation only.
 function labelForClass(n) {
-  return formatClassLabel(String(n));
+  return formatClassLabel(String(n), institutionTypeFor(currentTenant()));
 }
 
 // Ensure a class number + section letter exist in the classes table.
@@ -1238,8 +1313,8 @@ async function markFeeEditReverted(studentId) {
 
 function fileFeeEditsSafe() {
   try {
-    if (!fs.existsSync(DB_PATH)) return [];
-    const raw = fs.readFileSync(DB_PATH, "utf8");
+    if (!fs.existsSync(dbPathFor(currentTenant()))) return [];
+    const raw = fs.readFileSync(dbPathFor(currentTenant()), "utf8");
     const data = JSON.parse(raw);
     return Array.isArray(data.feeEdits) ? data.feeEdits : [];
   } catch { return []; }
@@ -1299,8 +1374,8 @@ async function appendTransportAssignment(row) {
 
 function fileTransportAssignmentsSafe() {
   try {
-    if (!fs.existsSync(DB_PATH)) return [];
-    const raw = fs.readFileSync(DB_PATH, "utf8");
+    if (!fs.existsSync(dbPathFor(currentTenant()))) return [];
+    const raw = fs.readFileSync(dbPathFor(currentTenant()), "utf8");
     const data = JSON.parse(raw);
     return Array.isArray(data.transportAssignments) ? data.transportAssignments : [];
   } catch { return []; }
@@ -2386,14 +2461,33 @@ async function readRoute(code) {
 
 // Persist a route back to whichever backend it came from. Skips fields that
 // should never be re-written (`code` is the PK).
+// Route patches are written in the camelCase shape the screens use, but the
+// table is snake_case. Without this map `startedAt` reached PostgREST as an
+// unknown column, the stripping loop below quietly dropped it, and the bus
+// start time only ever survived in the file mirror — which is a no-op on a
+// read-only serverless filesystem. Result: the transport board could never
+// say when a run began.
+const ROUTE_COLUMNS = {
+  startedAt: "started_at",
+  completedAt: "completed_at",
+  templateId: "template_id",
+  createdAt: "created_at",
+};
+
+function toRouteColumns(patch) {
+  const out = {};
+  for (const [k, v] of Object.entries(patch)) out[ROUTE_COLUMNS[k] || k] = v;
+  return out;
+}
+
 async function writeRoute({ row, backend }, patch) {
   const next = { ...row, ...patch };
   if (backend === "supabase") {
-    let attempt = { ...patch };
+    let attempt = toRouteColumns(patch);
     let upd = await supabase.from("routes").update(attempt).eq("code", row.code);
-    // Retry by stripping any column Supabase doesn't know about (e.g. attendant
-    // when the schema migration hasn't been run yet). The mirrored file copy
-    // below will hold the field so it still survives.
+    // Safety net for a column the schema genuinely lacks. It should not fire
+    // for anything in ROUTE_COLUMNS any more; if it does, that is schema
+    // drift worth fixing rather than absorbing, hence the warning.
     while (upd.error && /Could not find the .* column/i.test(upd.error.message)) {
       const m = upd.error.message.match(/Could not find the '?(\w+)'? column/i);
       const col = m?.[1];
@@ -3083,18 +3177,20 @@ export async function addStaff(row) {
 
   // Auto-provision a login account for teachers so they (a) show up in the
   // "Class teacher" picker on the Classes screen and (b) can sign in
-  // immediately. Common password — same for every teacher account so the
-  // principal only ever has to share one credential. Returned in the response
-  // so the UI can show it once at creation time. Callers (e.g. bulk
-  // import) can pass an explicit `defaultPassword` to override the
-  // shared COMMON_TEACHER_PASSWORD — used for per-teacher derived
-  // passwords like "Aakash@123".
+  // immediately.
+  //
+  // Each account gets its own random password, returned in the response so
+  // the UI can show it once at creation. It used to be one shared literal
+  // for every teacher in the school, which meant any teacher could sign in
+  // as any other — and read their classes, their leave and their pay.
+  // Callers that mint several logins at once (the bulk import) pass their
+  // own `defaultPassword` so they can collect the whole set for one CSV.
   let createdLogin = null;
   if (filled.role === "Teacher" && filled.email) {
     try {
       const existing = await getUserByEmail(filled.email);
       if (!existing) {
-        const defaultPassword = row.defaultPassword || COMMON_TEACHER_PASSWORD;
+        const defaultPassword = row.defaultPassword || readablePassword();
         const { hashPassword } = require("./auth.js");
         const passwordHash = await hashPassword(defaultPassword);
         await createUser({
@@ -3115,48 +3211,36 @@ export async function addStaff(row) {
   return { ...saved, createdLogin };
 }
 
-// Common credentials used when an account is auto-created on staff/student add.
-// Documented here so they're easy to find + change in one place.
-const COMMON_TEACHER_PASSWORD = "teacher123";
-
 // Strip everything except a-z 0-9 — used to turn a student's free-form name
 // ("Hari Krishna S.S") into a stable email local-part ("harikrishnass").
 function slugifyName(name) {
   return String(name || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
 }
 
-// Capitalised first word of the student's name. Used as the parent password
-// stem so each parent's credential is at least minimally personalised.
-// "aakash" → "Aakash", "HARI KRISHNA" → "Hari", "" → "Parent".
-function firstNameCapitalised(name) {
-  const first = String(name || "").trim().split(/\s+/)[0] || "Parent";
-  const letters = first.replace(/[^a-zA-Z]/g, "") || "Parent";
-  return letters.charAt(0).toUpperCase() + letters.slice(1).toLowerCase();
+function deriveParentPassword() {
+  // Random, not name-derived. "Aarav@123" is guessable by anyone holding a
+  // class list, and a guardian login opens that child's fees, attendance
+  // and messages. The plain text is handed to the admin once, at creation.
+  return readablePassword();
 }
 
-// Predictable, name-based parent password — "Aakash@123" style. SECURITY
-// CAVEAT: this is easily guessable; for a hardened deployment force a
-// password change on first login.
-function deriveParentPassword(studentName) {
-  return `${firstNameCapitalised(studentName)}@123`;
-}
-
-// Derive a parent login email when one wasn't explicitly supplied. New
-// format (2026-06-04): `parent.{slugged-name}@sirahdemo.school`. If a student
-// with the same slugged name already has an account, we append a 4-digit
-// tail from the student ID to disambiguate siblings or namesakes.
+// Derive a guardian login address when one wasn't supplied.
+//
+// Built on the institution's own domain, under a `parents.` subdomain so a
+// guardian address can never collide with a staff one. Same format the
+// seeder uses — see guardianEmail() in lib/accounts.js, which is the single
+// definition of the shape.
 async function deriveParentEmail(studentId, studentName) {
-  const base = slugifyName(studentName) || String(studentId).toLowerCase();
-  const candidate = `parent.${base}@sirahdemo.school`;
-  // Fast path — first student with this name gets the clean email.
+  const candidate = guardianEmail(currentTenant(), studentName, studentId);
+  // Fast path — first student with this name gets the clean address.
   try {
     const existing = await getUserByEmail(candidate);
     if (!existing) return candidate;
   } catch {}
-  // Collision: append the numeric tail of the student id, e.g. "9499".
-  // Falls back to the full id if there are no digits.
+  // Namesakes and siblings: disambiguate with the numeric tail of the
+  // student id, falling back to the whole id when it has no digits.
   const idTail = String(studentId).match(/\d+/)?.[0] || String(studentId).toLowerCase();
-  return `parent.${base}.${idTail}@sirahdemo.school`;
+  return candidate.replace("@", `.${idTail}@`);
 }
 
 // Create a parent login linked to a student so the parent dashboard scopes to
@@ -3200,8 +3284,8 @@ function fileAddStaff(filled) {
 // the file doesn't exist yet — it returns an empty array rather than throwing.
 function fileStaffSafe() {
   try {
-    if (!fs.existsSync(DB_PATH)) return [];
-    const raw = fs.readFileSync(DB_PATH, "utf8");
+    if (!fs.existsSync(dbPathFor(currentTenant()))) return [];
+    const raw = fs.readFileSync(dbPathFor(currentTenant()), "utf8");
     const data = JSON.parse(raw);
     return Array.isArray(data.staff) ? data.staff : [];
   } catch { return []; }
@@ -3209,8 +3293,8 @@ function fileStaffSafe() {
 
 function fileRoutesSafe() {
   try {
-    if (!fs.existsSync(DB_PATH)) return [];
-    const raw = fs.readFileSync(DB_PATH, "utf8");
+    if (!fs.existsSync(dbPathFor(currentTenant()))) return [];
+    const raw = fs.readFileSync(dbPathFor(currentTenant()), "utf8");
     const data = JSON.parse(raw);
     return Array.isArray(data.routes) ? data.routes : [];
   } catch { return []; }
@@ -3218,8 +3302,8 @@ function fileRoutesSafe() {
 
 function fileInventorySafe() {
   try {
-    if (!fs.existsSync(DB_PATH)) return [];
-    const raw = fs.readFileSync(DB_PATH, "utf8");
+    if (!fs.existsSync(dbPathFor(currentTenant()))) return [];
+    const raw = fs.readFileSync(dbPathFor(currentTenant()), "utf8");
     const data = JSON.parse(raw);
     return Array.isArray(data.inventory) ? data.inventory : [];
   } catch { return []; }
@@ -3227,8 +3311,8 @@ function fileInventorySafe() {
 
 function fileMovementsSafe() {
   try {
-    if (!fs.existsSync(DB_PATH)) return [];
-    const raw = fs.readFileSync(DB_PATH, "utf8");
+    if (!fs.existsSync(dbPathFor(currentTenant()))) return [];
+    const raw = fs.readFileSync(dbPathFor(currentTenant()), "utf8");
     const data = JSON.parse(raw);
     return Array.isArray(data.movements) ? data.movements.slice(0, 30) : [];
   } catch { return []; }
@@ -3239,8 +3323,8 @@ function fileMovementsSafe() {
 // column value (non-empty) wins and this is just a mirror.
 function fileInventoryRemarks() {
   try {
-    if (!fs.existsSync(DB_PATH)) return {};
-    const data = JSON.parse(fs.readFileSync(DB_PATH, "utf8"));
+    if (!fs.existsSync(dbPathFor(currentTenant()))) return {};
+    const data = JSON.parse(fs.readFileSync(dbPathFor(currentTenant()), "utf8"));
     return (data && data.inventoryRemarks && typeof data.inventoryRemarks === "object") ? data.inventoryRemarks : {};
   } catch { return {}; }
 }
@@ -3257,8 +3341,8 @@ function applyInventoryRemarkOverrides(list) {
 
 function fileBroadcastsSafe() {
   try {
-    if (!fs.existsSync(DB_PATH)) return [];
-    const raw = fs.readFileSync(DB_PATH, "utf8");
+    if (!fs.existsSync(dbPathFor(currentTenant()))) return [];
+    const raw = fs.readFileSync(dbPathFor(currentTenant()), "utf8");
     const data = JSON.parse(raw);
     return Array.isArray(data.broadcasts) ? data.broadcasts.slice(0, 50) : [];
   } catch { return []; }
@@ -3266,8 +3350,8 @@ function fileBroadcastsSafe() {
 
 function fileTemplatesSafe() {
   try {
-    if (!fs.existsSync(DB_PATH)) return [];
-    const raw = fs.readFileSync(DB_PATH, "utf8");
+    if (!fs.existsSync(dbPathFor(currentTenant()))) return [];
+    const raw = fs.readFileSync(dbPathFor(currentTenant()), "utf8");
     const data = JSON.parse(raw);
     return Array.isArray(data.templates) ? data.templates : [];
   } catch { return []; }
@@ -3298,16 +3382,16 @@ function savePickupStopEvening(studentId, stopName) {
 }
 function pickupStopsSafe() {
   try {
-    if (!fs.existsSync(DB_PATH)) return {};
-    const raw = fs.readFileSync(DB_PATH, "utf8");
+    if (!fs.existsSync(dbPathFor(currentTenant()))) return {};
+    const raw = fs.readFileSync(dbPathFor(currentTenant()), "utf8");
     const data = JSON.parse(raw);
     return (data.pickupStops && typeof data.pickupStops === "object") ? data.pickupStops : {};
   } catch { return {}; }
 }
 function pickupStopsEveningSafe() {
   try {
-    if (!fs.existsSync(DB_PATH)) return {};
-    const raw = fs.readFileSync(DB_PATH, "utf8");
+    if (!fs.existsSync(dbPathFor(currentTenant()))) return {};
+    const raw = fs.readFileSync(dbPathFor(currentTenant()), "utf8");
     const data = JSON.parse(raw);
     return (data.pickupStopsEvening && typeof data.pickupStopsEvening === "object") ? data.pickupStopsEvening : {};
   } catch { return {}; }
@@ -3318,16 +3402,16 @@ function pickupStopsEveningSafe() {
 // alongside Supabase rows.
 function fileDbSafe() {
   try {
-    if (!fs.existsSync(DB_PATH)) return {};
-    const raw = fs.readFileSync(DB_PATH, "utf8");
+    if (!fs.existsSync(dbPathFor(currentTenant()))) return {};
+    const raw = fs.readFileSync(dbPathFor(currentTenant()), "utf8");
     return JSON.parse(raw) || {};
   } catch { return {}; }
 }
 
 function fileRecentFeesSafe() {
   try {
-    if (!fs.existsSync(DB_PATH)) return [];
-    const raw = fs.readFileSync(DB_PATH, "utf8");
+    if (!fs.existsSync(dbPathFor(currentTenant()))) return [];
+    const raw = fs.readFileSync(dbPathFor(currentTenant()), "utf8");
     const data = JSON.parse(raw);
     return Array.isArray(data.recentFees) ? data.recentFees : [];
   } catch { return []; }
@@ -3335,8 +3419,8 @@ function fileRecentFeesSafe() {
 
 function fileEnquiriesSafe() {
   try {
-    if (!fs.existsSync(DB_PATH)) return [];
-    const raw = fs.readFileSync(DB_PATH, "utf8");
+    if (!fs.existsSync(dbPathFor(currentTenant()))) return [];
+    const raw = fs.readFileSync(dbPathFor(currentTenant()), "utf8");
     const data = JSON.parse(raw);
     return Array.isArray(data.enquiries) ? data.enquiries : [];
   } catch { return []; }
@@ -3344,8 +3428,8 @@ function fileEnquiriesSafe() {
 
 function fileComplaintsSafe() {
   try {
-    if (!fs.existsSync(DB_PATH)) return [];
-    const raw = fs.readFileSync(DB_PATH, "utf8");
+    if (!fs.existsSync(dbPathFor(currentTenant()))) return [];
+    const raw = fs.readFileSync(dbPathFor(currentTenant()), "utf8");
     const data = JSON.parse(raw);
     return Array.isArray(data.complaints) ? data.complaints : [];
   } catch { return []; }
@@ -3353,8 +3437,8 @@ function fileComplaintsSafe() {
 
 function fileRecipientListsSafe() {
   try {
-    if (!fs.existsSync(DB_PATH)) return [];
-    const raw = fs.readFileSync(DB_PATH, "utf8");
+    if (!fs.existsSync(dbPathFor(currentTenant()))) return [];
+    const raw = fs.readFileSync(dbPathFor(currentTenant()), "utf8");
     const data = JSON.parse(raw);
     return Array.isArray(data.recipientLists) ? data.recipientLists : [];
   } catch { return []; }
@@ -4836,7 +4920,7 @@ export async function setStudentFeeComponents({ studentId, components, actor = "
 // ---------- documents ----------
 // Generic document attachment — entity can be "student" | "staff" | "volunteer"
 // | "tc". File bytes are stored as base64 data-URLs in db.json. Good enough for
-// demo-sized files (< 2MB); swap to object storage in prod.
+// small files (< 2MB); swap to object storage before large uploads.
 export async function addDocument({ entityType, entityId, label, fileName, mimeType, dataUrl, uploadedBy }) {
   if (!entityType || !entityId) throw new Error("entityType + entityId required");
   if (!fileName || !dataUrl) throw new Error("fileName + dataUrl required");
@@ -5233,8 +5317,8 @@ function fileDonorReceiptsSafe() {
 
 function fileDonorsSafe() {
   try {
-    if (!fs.existsSync(DB_PATH)) return [];
-    const raw = fs.readFileSync(DB_PATH, "utf8");
+    if (!fs.existsSync(dbPathFor(currentTenant()))) return [];
+    const raw = fs.readFileSync(dbPathFor(currentTenant()), "utf8");
     const data = JSON.parse(raw);
     return Array.isArray(data.donors) ? data.donors : [];
   } catch { return []; }
@@ -5242,8 +5326,8 @@ function fileDonorsSafe() {
 
 function fileCampaignsSafe() {
   try {
-    if (!fs.existsSync(DB_PATH)) return [];
-    const raw = fs.readFileSync(DB_PATH, "utf8");
+    if (!fs.existsSync(dbPathFor(currentTenant()))) return [];
+    const raw = fs.readFileSync(dbPathFor(currentTenant()), "utf8");
     const data = JSON.parse(raw);
     return Array.isArray(data.campaigns) ? data.campaigns : [];
   } catch { return []; }
@@ -6509,9 +6593,18 @@ export async function listSubjects() {
     const db = fileRead();
     for (const s of (db.subjects || [])) upsert(s);
   } catch {}
-  // ALWAYS merge in the bundled defaults so a Computer Science added
-  // yesterday doesn't make English / Tamil / Maths disappear.
-  for (const s of DEFAULT_SUBJECTS) upsert(s);
+
+  // The bundled defaults are a first-run fallback, not a permanent union.
+  //
+  // They used to be merged in unconditionally, on the reasoning that adding
+  // a subject should not make English and Maths vanish. That was right when
+  // every install started empty and school-shaped. It is wrong now: each
+  // institution seeds its own curriculum, so the union put Tamil, Hindi and
+  // PT into an engineering college's subject list, and gave the school both
+  // "Mathematics" (its own) and "Maths" (the default) side by side.
+  if (byName.size === 0) {
+    for (const s of DEFAULT_SUBJECTS) upsert(s);
+  }
 
   return Array.from(byName.values()).sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -7192,21 +7285,6 @@ export async function updateMyProfile(userId, { name, email, newPassword } = {})
     const db = fileRead();
     if (!Array.isArray(db.authUsers)) db.authUsers = [];
     let idx = db.authUsers.findIndex((u) => u.id === userId);
-    // Lazy-seed from DEMO_ACCOUNTS on first edit.
-    if (idx === -1) {
-      try {
-        const seed = require("./seed-users.js");
-        const demo = (seed.DEMO_ACCOUNTS || []).find((a) => a.id === userId);
-        if (demo) {
-          db.authUsers.push({
-            id: demo.id, email: demo.email, role: demo.role, name: demo.name,
-            linkedId: demo.linkedId || null,
-            createdAt: new Date().toISOString(),
-          });
-          idx = db.authUsers.length - 1;
-        }
-      } catch {}
-    }
     if (idx === -1) return null;
     // File-side uniqueness check (Supabase already enforces the index).
     if (fields.email) {
@@ -7320,27 +7398,11 @@ export async function updateUser(id, patch) {
   if (supabaseEnabled) {
     const r = await supabase.from("users").update(fields).eq("id", id).select().maybeSingle();
     if (!r.error && r.data) return fromUser(r.data);
-    // Fall through to file fallback when Supabase doesn't know this user
-    // (e.g. demo accounts created via in-memory fallback only).
+    // Fall through to the file store when Supabase doesn't know this user.
   }
   const db = fileRead();
   if (!Array.isArray(db.authUsers)) db.authUsers = [];
   let idx = db.authUsers.findIndex((u) => u.id === id);
-  // Lazy-seed from DEMO_ACCOUNTS if the user only exists in memory.
-  if (idx === -1) {
-    try {
-      const seed = require("./seed-users.js");
-      const demo = (seed.DEMO_ACCOUNTS || []).find((a) => a.id === id);
-      if (demo) {
-        db.authUsers.push({
-          id: demo.id, email: demo.email, role: demo.role, name: demo.name,
-          linkedId: demo.linkedId || null,
-          createdAt: new Date().toISOString(),
-        });
-        idx = db.authUsers.length - 1;
-      }
-    } catch {}
-  }
   if (idx === -1) return null;
   const merged = {
     ...db.authUsers[idx],
@@ -7358,9 +7420,9 @@ export async function updateUser(id, patch) {
 }
 
 // Replace a user's bcrypt hash. Used by the admin "Reset password" flow on
-// the Users screen. Falls back to seeding the user row from DEMO_ACCOUNTS if
-// they only existed in memory before. Returns the safe (no-hash) user, or
-// null if the id is unknown to both stores.
+// the Users screen. Scoped to the current tenant, so an admin at one
+// institution can never reset a password at the other. Returns the safe
+// (no-hash) user, or null if the id is unknown to both stores.
 export async function setUserPassword(id, passwordHash) {
   if (!id || !passwordHash) return null;
 
@@ -7373,26 +7435,12 @@ export async function setUserPassword(id, passwordHash) {
       .maybeSingle();
     if (!r.error && r.data) return fromUser(r.data);
     // Fall through to file fallback if Supabase doesn't know this user
-    // (legacy demo accounts that were never written to the table).
+    // (legacy rows that were never written to the users table).
   }
 
   const db = fileRead();
   if (!Array.isArray(db.authUsers)) db.authUsers = [];
   let idx = db.authUsers.findIndex((u) => u.id === id);
-  if (idx === -1) {
-    try {
-      const seed = require("./seed-users.js");
-      const demo = (seed.DEMO_ACCOUNTS || []).find((a) => a.id === id);
-      if (demo) {
-        db.authUsers.push({
-          id: demo.id, email: demo.email, role: demo.role, name: demo.name,
-          linkedId: demo.linkedId || null,
-          createdAt: new Date().toISOString(),
-        });
-        idx = db.authUsers.length - 1;
-      }
-    } catch {}
-  }
   if (idx === -1) return null;
   db.authUsers[idx] = { ...db.authUsers[idx], passwordHash };
   fileWrite(db);
@@ -7414,21 +7462,7 @@ async function getUserById(id) {
   const db = fileRead();
   const list = db.authUsers || [];
   const found = list.find((u) => u.id === id);
-  if (!found) {
-    // Fall back to demo seed so add/remove works against teachers that
-    // haven't been written to the file yet.
-    try {
-      const seed = require("./seed-users.js");
-      const demo = (seed.DEMO_ACCOUNTS || []).find((a) => a.id === id);
-      if (demo) {
-        return fromUser({
-          id: demo.id, email: demo.email, role: demo.role, name: demo.name,
-          linked_id: demo.linkedId || null,
-        });
-      }
-    } catch {}
-    return null;
-  }
+  if (!found) return null;
   return fromUser({
     id: found.id, email: found.email, role: found.role, name: found.name,
     password_hash: found.passwordHash, linked_id: found.linkedId,
@@ -7437,8 +7471,9 @@ async function getUserById(id) {
 }
 
 // Convenience: list teachers (id, email, name, linkedId) — feeds the
-// "Class teacher" picker. Falls back to DEMO_ACCOUNTS so the picker is
-// never empty during the demo, even before the users table is populated.
+// "Class teacher" picker. Reads the users table for the current tenant; an
+// institution with no teaching staff on the system yet gets an empty picker,
+// which is the honest answer.
 export async function listTeachers() {
   const fromDb = await listUsers();
   // Normalise everything through fromUser so linkedClasses is always set.
@@ -7450,17 +7485,6 @@ export async function listTeachers() {
   const fileMap = new Map(
     fromDb.filter((u) => u.role === "teacher").map((u) => [u.id, norm(u)])
   );
-  try {
-    const seed = require("./seed-users.js");
-    for (const a of (seed.DEMO_ACCOUNTS || [])) {
-      if (a.role === "teacher" && !fileMap.has(a.id)) {
-        fileMap.set(a.id, fromUser({
-          id: a.id, email: a.email, role: a.role, name: a.name,
-          linked_id: a.linkedId || null,
-        }));
-      }
-    }
-  } catch {}
   return Array.from(fileMap.values());
 }
 

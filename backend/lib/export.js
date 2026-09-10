@@ -1,32 +1,52 @@
-// Shared export helpers — used by every CSV download and the print/PDF
-// renderer so headers stay consistent across the app.
+// Shared export helpers — used by every CSV download, receipt, certificate
+// and print/PDF renderer, so the institution's identity is written the same
+// way everywhere.
 //
-// The school's identity is read from app_settings.trust (Trust identity
-// section in Settings). Falls back to bundled defaults so the app still
-// produces sensible exports on a fresh install with no settings written
-// yet.
+// The identity comes from app_settings: the `school` section holds the
+// institution itself (name, address, contact, affiliation) and the `trust`
+// section holds the registered body that runs it, which is what has to
+// appear on a fee receipt and an 80G donation receipt.
+//
+// This used to read only from `trust`, so every export was headed with the
+// trust's name rather than the institution's, and an institution whose
+// trust name differed from its own printed the wrong one.
 
-const FALLBACK_SCHOOL = {
-  name: "Sirah Demo School",
-  trustName: "Sirah Education Trust",
-  regNo: null,
-  pan80g: null,
-  contact: null,
-  brand: "Sirah_CRM",
+const FALLBACK = {
+  name: "—",
+  trustName: "—",
+  brand: "Sirah CRM",
 };
 
-// Resolve the school identity from `E.SETTINGS` (or any plain settings
-// object). Always returns a fully-populated object — missing keys fall
-// back to the bundled defaults above so callers never have to null-check.
+/**
+ * Resolve the institution's identity from `E.SETTINGS` (or any plain
+ * settings object). Always returns a fully-populated object so callers
+ * never have to null-check; unset fields come back as null rather than as
+ * an invented placeholder, and a renderer that gets null simply omits the
+ * line instead of printing someone else's address.
+ */
 export function resolveSchool(settings) {
+  const school = (settings && settings.school) || {};
   const trust = (settings && settings.trust) || {};
   return {
-    name:      trust.name      || FALLBACK_SCHOOL.name,
-    trustName: trust.trustName || trust.name || FALLBACK_SCHOOL.trustName,
-    regNo:     trust.regNo     || FALLBACK_SCHOOL.regNo,
-    pan80g:    trust.pan80g    || FALLBACK_SCHOOL.pan80g,
-    contact:   trust.contact   || FALLBACK_SCHOOL.contact,
-    brand:     FALLBACK_SCHOOL.brand,
+    // Institution
+    name:        school.name || trust.name || FALLBACK.name,
+    legalName:   school.legalName || school.name || null,
+    address:     school.address || null,
+    city:        school.city || null,
+    phone:       school.phone || null,
+    email:       school.email || trust.contact || null,
+    website:     school.website || null,
+    affiliation: school.programme || null,
+    recognition: school.recognition || null,
+
+    // Governing body — printed under the institution on receipts, and the
+    // legally required line on an 80G donation receipt.
+    trustName: trust.name || trust.trustName || FALLBACK.trustName,
+    regNo:     trust.regNo || null,
+    pan80g:    trust.pan80g || null,
+    contact:   trust.contact || school.email || null,
+
+    brand: FALLBACK.brand,
   };
 }
 

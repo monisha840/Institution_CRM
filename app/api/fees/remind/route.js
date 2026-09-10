@@ -3,6 +3,8 @@ import { fileRead, fileWrite, logAudit } from "@/lib/db";
 import { supabase, supabaseEnabled, fromPendingFee, fromStudent } from "@/lib/supabase";
 import { getSession } from "@/lib/auth";
 import { notifyWhatsApp } from "@/lib/whatsapp";
+import { tenantConfig } from "@/lib/tenants";
+import { currentTenant } from "@/lib/tenant-context";
 
 export const dynamic = "force-dynamic";
 
@@ -103,7 +105,7 @@ export async function POST(req) {
         "",
         "Kindly pay the balance fees.",
         "",
-        "— Sirah Demo School",
+        `— ${tenantConfig(currentTenant()).name}`,
         "Thank you.",
       ].join("\n");
       notifyWhatsApp("fee_reminder", {
@@ -129,7 +131,7 @@ export async function POST(req) {
 
 function defaultReminderMessage(p) {
   const amt = (p.amount || 0).toLocaleString("en-IN");
-  return `Friendly reminder: a fee of ₹${amt} is pending for ${p.name} (${p.cls}). Please clear it at your earliest convenience or contact the school office. — Sirah Demo School`;
+  return `Friendly reminder: a fee of ₹${amt} is pending for ${p.name} (${p.cls}). Please clear it at your earliest convenience or contact the school office. — ${tenantConfig(currentTenant()).name}`;
 }
 
 export async function GET() {

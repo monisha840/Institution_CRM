@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Icon from "../Icon";
 import { resolveSchool, downloadPdf } from "@/lib/export";
-import { AvatarChip, KPI } from "../ui";
+import { AvatarChip, KPI, EmptyState, SkeletonTable, PageHeader } from "../ui";
 import CredentialsModal from "../CredentialsModal";
 import { formatClassLabel } from "@/lib/format";
 
@@ -38,7 +38,7 @@ export default function ScreenUsers({ E, role, session, refresh }) {
 
   // Backfill parent logins: wipe all parent user accounts, then re-create
   // one fresh login per current student so emails follow the canonical
-  // parent.{name}@sirahdemo.school scheme. Used to clean up after imports
+  // {student}@parents.{institution domain} scheme. Used to clean up after imports
   // where stale parent rows were colliding with new student IDs.
   const [backfillBusy, setBackfillBusy]   = useState(false);
   const [backfillLogins, setBackfillLogins] = useState(null);
@@ -118,16 +118,11 @@ export default function ScreenUsers({ E, role, session, refresh }) {
   // login hasn't been provisioned yet (e.g. legacy students admitted
   // before the auto-provisioning was wired up).
   //
-  // The PASSWORD is derived from the student name using the same rule
-  // as backend/lib/db.js → deriveParentPassword: take the first word of
-  // the name, capitalise first letter + lowercase rest, append "@123".
-  // Shown alongside the email so admins can hand parents their initial
-  // credentials. Only admins see this column (authUsers gated above).
-  const derivePassword = (name) => {
-    const first = String(name || "").trim().split(/\s+/)[0] || "Parent";
-    const letters = first.replace(/[^a-zA-Z]/g, "") || "Parent";
-    return `${letters.charAt(0).toUpperCase()}${letters.slice(1).toLowerCase()}@123`;
-  };
+  // Passwords are generated randomly at provisioning and only ever stored
+  // as a bcrypt hash, so there is nothing to display here — this column
+  // used to re-derive the old "FirstName@123" pattern client-side, which
+  // both leaked the scheme and, now that it no longer holds, would print a
+  // password that does not work. Use Reset password to issue a new one.
   const parents = useMemo(() => {
     const parentLogins = new Map();
     for (const u of authUsers) {
@@ -142,9 +137,7 @@ export default function ScreenUsers({ E, role, session, refresh }) {
         childCls: s.cls,
         // Phone column on the student record is the parent's number.
         phone: s.parent || "—",
-        // Default password derived from the student name. Only meaningful
-        // if a login was actually provisioned (login present below).
-        password: login ? derivePassword(s.name) : "—",
+        hasLogin: Boolean(login),
         // The actual login email from the auth users table. Empty for
         // non-admin viewers because `authUsers` is only fetched for admin.
         email: login?.email || "—",
@@ -363,22 +356,9 @@ export default function ScreenUsers({ E, role, session, refresh }) {
 
   return (
     <div className="page">
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">{isManager ? "Governance · Directory" : "My classroom · Directory"}</div>
-          <div className="page-title">
-            {isManager
-              ? <>Users <span className="amber">& accounts</span></>
-              : <>My <span className="amber">students</span></>}
-          </div>
-          <div className="page-sub">
-            {isManager
-              ? `${totalPeople} account${totalPeople === 1 ? "" : "s"} across staff, students and parents.`
-              : `${totalPeople} student${totalPeople === 1 ? "" : "s"} in your assigned classes.`}
-          </div>
-        </div>
-        <div className="page-actions">
-          <button className="btn" onClick={exportPdf} title="Open a printable, branded PDF report">
+      <PageHeader
+        sub={isManager ? `${totalPeople} account${totalPeople === 1 ? "" : "s"} across staff, students and parents.` : `${totalPeople} student${totalPeople === 1 ? "" : "s"} in your assigned classes.`}
+        actions={<><button className="btn" onClick={exportPdf} title="Open a printable, branded PDF report">
             <Icon name="download" size={13} />Export PDF
           </button>
           {isAdmin && (
@@ -387,7 +367,7 @@ export default function ScreenUsers({ E, role, session, refresh }) {
                 className="btn"
                 onClick={runBackfill}
                 disabled={backfillBusy}
-                title="Wipe every parent user and create a clean login per current student (parent.{name}@sirahdemo.school + {Name}@123)"
+                title="Wipe every parent login and create one per current student, on the institution's own domain with a freshly generated password each"
               >
                 {backfillBusy ? (
                   <>
@@ -407,9 +387,8 @@ export default function ScreenUsers({ E, role, session, refresh }) {
                 <Icon name="plus" size={13} />Add user
               </button>
             </>
-          )}
-        </div>
-      </div>
+          )}</>}
+      />
 
       {isManager && (
         <div className="grid g-4" style={{ marginBottom: 14 }}>
@@ -529,12 +508,18 @@ export default function ScreenUsers({ E, role, session, refresh }) {
                 </thead>
                 <tbody>
                   {filteredStaff.length === 0 && (
-                    <tr><td colSpan={5} className="empty">
-                      {allStaff.length === 0 ? "No staff on file yet — add the first one from the Staff screen." : "No matches."}
+                    <tr><td colSpan={5} style={{ padding: 0 }}>
+                      <EmptyState
+                        icon="staff"
+                        title={allStaff.length === 0 ? "No staff on file" : "No matching staff"}
+                        body={allStaff.length === 0
+                          ? "Staff are added on the Staff screen; their directory entry and login appear here automatically."
+                          : "Try a different name, role or department."}
+                      />
                     </td></tr>
                   )}
-                  {filteredStaff.map((u) => (
-                    <tr key={u.id || u.email}>
+                  {filteredStaff.map((u, i) => (
+                    <tr key={`${u.id || u.email}-${i}`}>
                       <td>
                         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                           <AvatarChip initials={u.avatar || initialsOf(u.name)} />
@@ -642,7 +627,7 @@ export default function ScreenUsers({ E, role, session, refresh }) {
                 </thead>
                 <tbody>
                   {authBusy && filteredAuthUsers.length === 0 && (
-                    <tr><td colSpan={5} className="empty">Loading login accounts…</td></tr>
+                    <tr><td colSpan={5} style={{ padding: 0 }}><SkeletonTable rows={4} cols={4} /></td></tr>
                   )}
                   {!authBusy && filteredAuthUsers.length === 0 && (
                     <tr><td colSpan={5} className="empty">
@@ -655,8 +640,8 @@ export default function ScreenUsers({ E, role, session, refresh }) {
                         : "No matches."}
                     </td></tr>
                   )}
-                  {filteredAuthUsers.map((u) => (
-                    <tr key={u.id || u.email}>
+                  {filteredAuthUsers.map((u, i) => (
+                    <tr key={`${u.id || u.email}-${i}`}>
                       <td>
                         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                           <AvatarChip initials={initialsOf(u.name || u.email)} />
@@ -700,17 +685,23 @@ export default function ScreenUsers({ E, role, session, refresh }) {
                     <th>Child class</th>
                     <th>Phone</th>
                     <th>Login email</th>
-                    <th>Password</th>
+                    <th>Login</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredParents.length === 0 && (
-                    <tr><td colSpan={5} className="empty">
-                      {parents.length === 0 ? "Parents are auto-provisioned on student admission." : "No matches."}
+                    <tr><td colSpan={5} style={{ padding: 0 }}>
+                      <EmptyState
+                        icon="users"
+                        title={parents.length === 0 ? "No parent accounts yet" : "No matching parents"}
+                        body={parents.length === 0
+                          ? "A parent login is created automatically when a student is admitted — no manual setup needed."
+                          : "Try a different name or phone number."}
+                      />
                     </td></tr>
                   )}
-                  {filteredParents.map((p) => (
-                    <tr key={p.id}>
+                  {filteredParents.map((p, i) => (
+                    <tr key={`${p.id}-${i}`}>
                       <td>
                         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                           <AvatarChip initials={initialsOf(p.childName)} />
@@ -723,22 +714,10 @@ export default function ScreenUsers({ E, role, session, refresh }) {
                       <td><span className="chip">{formatClassLabel(p.childCls)}</span></td>
                       <td style={{ fontSize: 11.5, color: "var(--ink-3)" }}>{p.phone}</td>
                       <td style={{ fontSize: 11.5, color: "var(--ink-3)", fontFamily: "var(--font-mono)" }}>{p.email}</td>
-                      <td style={{ fontSize: 11.5, color: "var(--ink-3)", fontFamily: "var(--font-mono)" }}>
-                        {p.password !== "—" ? (
-                          <span
-                            title="Click to copy"
-                            onClick={() => {
-                              if (p.password === "—") return;
-                              navigator.clipboard?.writeText(p.password).then(
-                                () => flashOk(`Copied ${p.password}`),
-                                () => {}
-                              );
-                            }}
-                            style={{ cursor: "pointer" }}
-                          >
-                            {p.password}
-                          </span>
-                        ) : "—"}
+                      <td style={{ fontSize: 11.5 }}>
+                        {p.hasLogin
+                          ? <span className="chip ok">Login active</span>
+                          : <span className="chip">Not provisioned</span>}
                       </td>
                     </tr>
                   ))}
@@ -756,10 +735,15 @@ export default function ScreenUsers({ E, role, session, refresh }) {
               <div><div className="card-title">Roles</div><div className="card-sub">Counts by role across the trust</div></div>
             </div>
             <div>
-              {Object.entries(ROLE_DESC).concat([
-                ["Student", "Enrolled child · uses parent's account."],
-                ["Parent",  "Their child(ren) only · fees, academics, messages."],
-              ]).map(([r, desc]) => (
+              {/* ROLE_DESC already describes Parent, so only append the roles
+                  it is missing — appending Parent again rendered the row
+                  twice under the same React key. */}
+              {Object.entries(ROLE_DESC).concat(
+                [
+                  ["Student", "Enrolled child · uses parent's account."],
+                  ["Parent",  "Their child(ren) only · fees, academics, messages."],
+                ].filter(([r]) => !(r in ROLE_DESC))
+              ).map(([r, desc]) => (
                 <div className="lrow" key={r}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 500 }}>
@@ -923,7 +907,7 @@ function AddUserModal({ customRoles = [], onClose, onCreated }) {
           </Field>
           <Field label="Email *">
             <input className="input" required type="email" value={form.email}
-              onChange={(e) => set("email", e.target.value)} placeholder="priya@school.com" maxLength={120} />
+              onChange={(e) => set("email", e.target.value)} placeholder="name@yourschool.edu.in" maxLength={120} />
           </Field>
           <Field label="Password *" hint="Minimum 6 characters. Share with the user securely.">
             <div style={{ display: "flex", gap: 6 }}>
@@ -1052,9 +1036,9 @@ function BulkParentLoginsModal({ logins, onClose, flash }) {
             fontSize: 12, lineHeight: 1.45,
             padding: "10px 12px", borderRadius: 8,
           }}>
-            <strong>Security note:</strong> these passwords follow a predictable
-            <code style={{ margin: "0 4px", fontSize: 11 }}>FirstName@123</code>
-            pattern. Ask each parent to change their password after first sign-in.
+            <strong>Hand these over securely.</strong> Each password is generated
+            once and stored only as a hash — it cannot be read back from this
+            screen later. If one is lost, issue a new one with Reset password.
           </div>
 
           <div style={{

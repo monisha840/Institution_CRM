@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Icon from "../Icon";
-import { KPI, AvatarChip, EmptyState } from "../ui";
+import { KPI, AvatarChip, EmptyState, PageHeader } from "../ui";
 import { resolveSchool, downloadPdf } from "@/lib/export";
 
 function toneFor(action = "") {
@@ -77,21 +77,15 @@ export default function ScreenAudit({ E, session }) {
 
   return (
     <div className="page">
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">Governance</div>
-          <div className="page-title">Audit <span className="amber">log</span></div>
-          <div className="page-sub">Every sensitive action is captured — financial writes, permission changes, and parent-facing messages.</div>
-        </div>
-        <div className="page-actions">
-          <select className="select" value={filter} onChange={(e) => setFilter(e.target.value)}>
+      <PageHeader
+        sub={"Every sensitive action is captured — financial writes, permission changes, and parent-facing messages."}
+        actions={<><select className="select" value={filter} onChange={(e) => setFilter(e.target.value)}>
             <option value="all">All events</option>
             <option value="financial">Financial</option>
             <option value="permissions">Permissions</option>
           </select>
-          <button className="btn" onClick={exportPdf} disabled={events.length === 0} title={events.length === 0 ? "No events to export" : `Open a printable, branded PDF report (${events.length} events)`}><Icon name="download" size={13} />Export PDF</button>
-        </div>
-      </div>
+          <button className="btn" onClick={exportPdf} disabled={events.length === 0} title={events.length === 0 ? "No events to export" : `Open a printable, branded PDF report (${events.length} events)`}><Icon name="download" size={13} />Export PDF</button></>}
+      />
 
       <div className="grid g-4" style={{ marginBottom: 18 }}>
         {(() => {

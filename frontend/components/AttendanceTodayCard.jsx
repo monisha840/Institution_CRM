@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Icon from "./Icon";
+import { isTeachingRole } from "@/lib/format";
+import { vocab } from "@/lib/institution";
 
 // Today's attendance monitor — students (from daily logs) and teachers (from
 // teacher_attendance) side by side, so admin/principal can watch both at a
 // glance from their landing page. Renders nothing for parents.
 export default function AttendanceTodayCard({ E, setCurrent, role }) {
   if (role === "parent") return null;
+  const V = vocab();
 
   // Resolve "today" after mount to avoid SSR/hydration mismatch.
   const [todayIso, setTodayIso] = useState("");
@@ -27,13 +30,23 @@ export default function AttendanceTodayCard({ E, setCurrent, role }) {
   const sTotal = (E.ADDED_STUDENTS || []).length;
   const sPct = sMarked ? Math.round(((sPresent + sLate) / sMarked) * 100) : null;
 
-  const tAtt = (E.TEACHER_ATTENDANCE || []).filter((r) => r.date === todayIso);
+  // Numerator and denominator have to describe the same people. The
+  // register is marked for all staff, but this card says "Teachers", so
+  // both sides are narrowed to teaching roles. Previously the count of
+  // marked rows covered every employee while the total counted only staff
+  // whose title contained "teach" — hence "40/15 marked", and nothing at
+  // all in the college, where nobody's title says teacher.
+  const teachingStaff = (E.STAFF || []).filter((s) => isTeachingRole(s.role));
+  const teachingIds = new Set(teachingStaff.map((s) => s.id));
+  const tAtt = (E.TEACHER_ATTENDANCE || []).filter(
+    (r) => r.date === todayIso && (teachingIds.size === 0 || teachingIds.has(r.teacherId ?? r.teacher_id))
+  );
   const tPresent = tAtt.filter((r) => r.status === "present").length;
   const tLate = tAtt.filter((r) => r.status === "late").length;
   const tAbsent = tAtt.filter((r) => r.status === "absent").length;
   const tLeave = tAtt.filter((r) => r.status === "leave").length;
   const tMarked = tAtt.length;
-  const tTotal = (E.STAFF || []).filter((s) => /teach/i.test(s.role || "")).length;
+  const tTotal = teachingStaff.length || (E.STAFF || []).length;
   const tPct = tMarked ? Math.round(((tPresent + tLate) / tMarked) * 100) : null;
 
   const pctColor = (p) => p == null ? "var(--ink-4)" : p >= 90 ? "var(--ok)" : p >= 75 ? "var(--warn, #b07a18)" : "var(--err, #b13c1c)";
@@ -68,7 +81,7 @@ export default function AttendanceTodayCard({ E, setCurrent, role }) {
       <div className="card-head">
         <div>
           <div className="card-title">Attendance today</div>
-          <div className="card-sub">{dateLabel || todayIso || " "} · students &amp; teachers</div>
+          <div className="card-sub">{dateLabel || todayIso || " "} · students &amp; {V.educatorPlural.toLowerCase()}</div>
         </div>
         {setCurrent && (
           <button className="btn sm" onClick={() => setCurrent("attendance")} title="Open the Attendance screen">
@@ -79,7 +92,7 @@ export default function AttendanceTodayCard({ E, setCurrent, role }) {
       <div style={{ display: "flex", flexWrap: "wrap" }}>
         <Block title="Students" icon="students" pct={sPct} present={sPresent} late={sLate} absent={sAbsent} leave={sLeave} marked={sMarked} total={sTotal} />
         <div style={{ width: 1, background: "var(--rule)", alignSelf: "stretch" }} />
-        <Block title="Teachers" icon="user" pct={tPct} present={tPresent} late={tLate} absent={tAbsent} leave={tLeave} marked={tMarked} total={tTotal} />
+        <Block title={V.educatorPlural} icon="user" pct={tPct} present={tPresent} late={tLate} absent={tAbsent} leave={tLeave} marked={tMarked} total={tTotal} />
       </div>
     </div>
   );

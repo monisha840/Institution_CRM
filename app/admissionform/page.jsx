@@ -1,5 +1,8 @@
 import { readSettings } from "@/lib/db";
 import AdmissionFormClient from "./AdmissionFormClient";
+import { tenantConfig } from "@/lib/tenants";
+import { currentTenant } from "@/lib/tenant-context";
+import { resolveSchool } from "@/lib/export";
 
 export const dynamic = "force-dynamic";
 
@@ -8,19 +11,34 @@ export const dynamic = "force-dynamic";
 // where principal / admin can review and convert to an admitted student
 // via the existing Enquiries → Convert flow.
 export default async function AdmissionFormPage() {
-  // Pull the school identity so the form shows the right name.
-  // Fall back to the bundled defaults if settings haven't been written.
-  // Pull the school identity so the form shows the right names.
-  // Fall back to the bundled defaults if settings haven't been written.
-  let school = { name: "Sirah Demo School", trustName: "Sirah Education Trust" };
+  // This page is public, so it has no session to read a tenant from —
+  // middleware resolves it from the ?tenant= parameter or the hint cookie
+  // and stamps it on the request. The registry is the fallback identity,
+  // which means the form is correctly branded even before any settings row
+  // has been written.
+  const institution = tenantConfig(currentTenant());
+  let school = {
+    name: institution.name,
+    trustName: institution.trustName,
+    city: institution.city,
+    address: `${institution.addressLine1}, ${institution.addressLine2} ${institution.pincode}`,
+    phone: institution.phone,
+    contact: institution.email,
+    regNo: institution.trustRegNo,
+    institutionType: institution.institutionType,
+  };
   try {
     const settings = await readSettings();
-    const trust = settings?.trust || {};
+    const configured = resolveSchool(settings);
     school = {
-      name:      trust.name      || school.name,
-      trustName: trust.trustName || trust.name || school.trustName,
-      regNo:     trust.regNo     || null,
-      contact:   trust.contact   || null,
+      ...school,
+      name:      configured.name      || school.name,
+      trustName: configured.trustName || school.trustName,
+      city:      configured.city      || school.city,
+      address:   configured.address   || school.address,
+      phone:     configured.phone     || school.phone,
+      contact:   configured.contact   || school.contact,
+      regNo:     configured.regNo     || school.regNo,
     };
   } catch {}
 

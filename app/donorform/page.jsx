@@ -1,5 +1,8 @@
 import { readSettings } from "@/lib/db";
 import DonorFormClient from "./DonorFormClient";
+import { tenantConfig } from "@/lib/tenants";
+import { currentTenant } from "@/lib/tenant-context";
+import { resolveSchool } from "@/lib/export";
 
 export const dynamic = "force-dynamic";
 
@@ -8,20 +11,26 @@ export const dynamic = "force-dynamic";
 // admin / principal / trust accountant can review and accept it from
 // the Donors screen.
 export default async function DonorFormPage() {
-  // Pull the trust identity so the form shows the right school name.
-  // Fall back to the bundled defaults if settings haven't been written.
-  // Pull the trust identity so the form shows the right school name.
-  // Fall back to the bundled defaults if settings haven't been written.
-  let school = { name: "Sirah Demo School", trustName: "Sirah Education Trust" };
+  // Public page: middleware resolves the tenant from ?tenant= or the hint
+  // cookie, and the registry supplies the identity so the form is branded
+  // correctly even before any settings row exists.
+  const institution = tenantConfig(currentTenant());
+  let school = {
+    name: institution.name,
+    trustName: institution.trustName,
+    regNo: institution.trustRegNo,
+    pan80g: institution.trust80g,
+    contact: institution.email,
+  };
   try {
     const settings = await readSettings();
-    const trust = settings?.trust || {};
+    const configured = resolveSchool(settings);
     school = {
-      name:      trust.name      || school.name,
-      trustName: trust.trustName || trust.name || school.trustName,
-      regNo:     trust.regNo     || null,
-      pan80g:    trust.pan80g    || null,
-      contact:   trust.contact   || null,
+      name:      configured.name      || school.name,
+      trustName: configured.trustName || school.trustName,
+      regNo:     configured.regNo     || school.regNo,
+      pan80g:    configured.pan80g    || school.pan80g,
+      contact:   configured.contact   || school.contact,
     };
   } catch {}
 

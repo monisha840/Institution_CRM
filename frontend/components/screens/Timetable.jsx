@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Icon from "../Icon";
-import { KPI } from "../ui";
+import { KPI, ScreenToast as Toast, EmptyState, ModalShell, PageHeader } from "../ui";
 import { formatClassLabel } from "@/lib/format";
 
 // Standard Indian school week — 6 working days. The number of periods and
@@ -27,40 +27,7 @@ const DEFAULT_PERIOD_LIST = [
   { period: 9, start: "15:00", end: "15:45" },
 ];
 
-function Toast({ msg, tone, onClose }) {
-  if (!msg) return null;
-  const bg = tone === "ok" ? "var(--ok)" : tone === "err" ? "var(--err, #b13c1c)" : "var(--ink)";
-  return (
-    <div onClick={onClose} role="status" style={{
-      position: "fixed", bottom: 18, right: 18, zIndex: 9000,
-      background: bg, color: "#fff", padding: "9px 14px", borderRadius: 8,
-      fontSize: 12, fontWeight: 500, cursor: "pointer", maxWidth: 360,
-      boxShadow: "0 12px 30px -16px rgba(0,0,0,0.35)",
-    }}>{msg}</div>
-  );
-}
 
-function ModalShell({ title, sub, onClose, children, width = 460 }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "var(--overlay)", display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto" }}>
-      <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: width, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
-        <div className="card-head">
-          <div>
-            <div className="card-title">{title}</div>
-            {sub && <div className="card-sub">{sub}</div>}
-          </div>
-          <button className="icon-btn" onClick={onClose}><Icon name="x" size={14} /></button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 function Field({ label, hint, children }) {
   return (
@@ -269,14 +236,10 @@ export default function ScreenTimetable({ E, refresh, role, session }) {
     <div className="page">
       <Toast msg={toast?.msg} tone={toast?.tone} onClose={() => setToast(null)} />
 
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">{headerEyebrow}</div>
-          <div className="page-title">{headerTitle}</div>
-          <div className="page-sub">{headerSub}</div>
-        </div>
-        {(isManager || isTeacher) && (
-          <div className="page-actions">
+      <PageHeader
+        sub={headerSub}
+        actions={<>{(isManager || isTeacher) && (
+          <>
             {canEditPeriods && (
               <button
                 className="btn"
@@ -295,9 +258,9 @@ export default function ScreenTimetable({ E, refresh, role, session }) {
               onChange={setPickedClass}
               allClasses={allClasses}
             />
-          </div>
-        )}
-      </div>
+          </>
+        )}</>}
+      />
 
       {/* KPIs — manager only (parents/teachers don't need stats). */}
       {isManager && (
@@ -449,10 +412,13 @@ export default function ScreenTimetable({ E, refresh, role, session }) {
         />
       ) : (
         <div className="card" style={{ padding: 24 }}>
-          <div className="empty">
-            {isParent ? "No child linked to this account yet — speak to the school office." :
-                        "Pick a class from the dropdown above."}
-          </div>
+          <EmptyState
+            icon="clock"
+            title={isParent ? "No child linked to this account" : "Pick a class to begin"}
+            body={isParent
+              ? "Ask the school office to link your account to your child's record and their timetable appears here."
+              : "Choose a class from the dropdown above to see its weekly period plan."}
+          />
         </div>
       )}
 

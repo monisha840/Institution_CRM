@@ -10,6 +10,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Icon from "../Icon";
+import { PageHeader } from "../ui";
 import { resolveSchool, downloadPdf } from "@/lib/export";
 import { formatClassLabel } from "@/lib/format";
 
@@ -164,33 +165,17 @@ export default function ScreenScaleAdvisory({ E, role, session }) {
   if (!isAuthorised) {
     return (
       <div className="page">
-        <div className="page-head">
-          <div>
-            <div className="page-title">Parent advisory</div>
-            <div className="page-sub">Teachers / admin / principal only.</div>
-          </div>
-        </div>
+        <PageHeader
+          sub={"Teachers / admin / principal only."}
+        />
       </div>
     );
   }
 
   return (
     <div className="page">
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">SCALE · Stakeholder layer 4</div>
-          <div className="page-title">Parent <span className="amber">advisory</span></div>
-          <div className="page-sub">
-            Teacher's script for the parent meeting. <strong>Not a handout.</strong>{" "}
-            One specific home action per meeting — never five. The data below builds the script automatically.
-          </div>
-        </div>
-        <div className="page-actions">
-          <button className="btn accent" onClick={exportScriptPdf} disabled={!profile}>
-            <Icon name="download" size={13} />Print teacher's script
-          </button>
-        </div>
-      </div>
+      <PageHeader
+      />
 
       {/* Don't-hand-to-parent warning bar */}
       <div style={{

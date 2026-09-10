@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { readAllData } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { normalizeTenant, tenantConfig } from "@/lib/tenants";
 import AppShell from "@/components/AppShell";
 
 export const dynamic = "force-dynamic";
@@ -74,6 +75,9 @@ export default async function Page() {
   const session = await getSession();
   if (!session) redirect("/login");
 
+  const tenant = normalizeTenant(session.tenant);
+  const institution = tenantConfig(tenant);
+
   const db = await readAllData();
   let E = shapeForScreens(db);
 
@@ -144,6 +148,19 @@ export default async function Page() {
         // for staff who don't have a matching roster entry). Always trust
         // this over linkedId when filtering by teacher.
         staffId: resolvedStaffId,
+        // Which institution this session belongs to. Signed into the JWT at
+        // login and verified by middleware, so it is safe to hand to the
+        // client — the shell uses it for branding and vocabulary, never for
+        // access decisions (those are re-checked server-side per request).
+        tenant,
+        institution: {
+          id: institution.id,
+          name: institution.name,
+          shortName: institution.shortName,
+          type: institution.institutionType,
+          city: institution.city,
+          tagline: institution.tagline,
+        },
       }}
     />
   );

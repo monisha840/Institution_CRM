@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Icon from "../Icon";
-import { KPI } from "../ui";
+import { KPI, EmptyState, PageHeader } from "../ui";
 import { resolveSchool, downloadPdf } from "@/lib/export";
 import { formatClassLabel } from "@/lib/format";
 
@@ -168,27 +168,17 @@ export default function ScreenStudentActivities({ E, role, session, refresh }) {
         }}>{toast.msg}</div>
       )}
 
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">Students · Recognition</div>
-          <div className="page-title">Activities &amp; <span className="amber">achievements</span></div>
-          <div className="page-sub">
-            {isParent
-              ? "Your child's extra-curricular log — sports, debates, science fair, external competitions."
-              : "Log every student's extra-curricular work — internal events and external competitions, with achievement level and certificate links."}
-          </div>
-        </div>
-        <div className="page-actions">
-          <button className="btn" onClick={exportPdf} disabled={filtered.length === 0} title="Open a printable, branded PDF report">
+      <PageHeader
+        sub={isParent ? "Your child's extra-curricular log — sports, debates, science fair, external competitions." : "Log every student's extra-curricular work — internal events and external competitions, with achievement level and certificate links."}
+        actions={<><button className="btn" onClick={exportPdf} disabled={filtered.length === 0} title="Open a printable, branded PDF report">
             <Icon name="download" size={13} />Export PDF
           </button>
           {canWrite && (
             <button className="btn accent" onClick={() => setShowForm(true)}>
               <Icon name="plus" size={13} />Log activity
             </button>
-          )}
-        </div>
-      </div>
+          )}</>}
+      />
 
       <div className="grid g-4" style={{ marginBottom: 18 }}>
         <KPI label="Total activities" value={counts.total} sub="this term" puck="cream" puckIcon="academic" />
@@ -230,7 +220,11 @@ export default function ScreenStudentActivities({ E, role, session, refresh }) {
           </div>
         </div>
         {filtered.length === 0 ? (
-          <div className="empty" style={{ padding: 36 }}>No activities logged yet.</div>
+          <EmptyState
+            icon="academic"
+            title="No activities logged yet"
+            body="Sports, olympiads, cultural events and their achievement levels are recorded here and show on the student's report."
+          />
         ) : (
           <div>
             {paged.map((a) => (

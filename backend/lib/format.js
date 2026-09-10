@@ -1,34 +1,75 @@
 import { isCollege, vocab } from "./institution";
 // Indian-format money helpers, used both server- and client-side.
 
-export const money = (n) => "₹" + Number(n).toLocaleString("en-IN");
+// Full precision, Indian digit grouping: ₹12,09,205. Negatives put the
+// sign before the symbol rather than after it, which is what toLocaleString
+// on the raw number would have produced ("₹-12,09,205").
+export const money = (n) => {
+  const value = Number(n);
+  if (!Number.isFinite(value)) return "—";
+  const sign = value < 0 ? "-" : "";
+  return `${sign}₹${Math.abs(value).toLocaleString("en-IN")}`;
+};
 
+/**
+ * Compact money, Indian scale: ₹95.52L, ₹1.47Cr, ₹8.5K.
+ *
+ * Every comparison used to be against the signed value, so anything
+ * negative fell straight through to the last line and printed raw:
+ * a net surplus of -1209205 rendered "₹-1209205" next to a neatly
+ * abbreviated "₹95.52L". Deficits are exactly the figure a principal
+ * looks at hardest, and it was the one number in the app that came out
+ * unformatted. Scale off the magnitude, put the sign in front.
+ */
 export const moneyK = (n) => {
-  if (n >= 10000000) return "₹" + (n / 10000000).toFixed(2) + "Cr";
-  if (n >= 100000) return "₹" + (n / 100000).toFixed(2) + "L";
-  if (n >= 1000) return "₹" + (n / 1000).toFixed(1) + "K";
-  return "₹" + n;
+  const value = Number(n);
+  if (!Number.isFinite(value)) return "—";
+  const sign = value < 0 ? "-" : "";
+  const abs = Math.abs(value);
+  if (abs >= 10000000) return `${sign}₹${(abs / 10000000).toFixed(2)}Cr`;
+  if (abs >= 100000) return `${sign}₹${(abs / 100000).toFixed(2)}L`;
+  if (abs >= 1000) return `${sign}₹${(abs / 1000).toFixed(1)}K`;
+  return `${sign}₹${abs.toLocaleString("en-IN")}`;
 };
 
 // Canonical list of fee categories the school collects. Order matters — it's
 // the order they appear in pickers, in the receipt particulars, and in the
 // Reports breakdown. Both `key` (slug, used as the storage value) and `label`
 // (display text) are exported so server validation and UI rendering agree.
+// Both institutions draw from this one catalogue and each uses the subset
+// that fits how it actually bills. A school collects three terms, a kit and
+// a uniform; a college collects two semesters plus hostel, lab and exam
+// fees. Keeping one list means a receipt, a reminder and the Reports
+// breakdown all resolve a stored key to the same words no matter which
+// institution raised the fee.
 export const FEE_TYPES = [
   // 'annual' is the bucket the bulk Excel import drops every student's
-  // per-row Fees amount into — schools that quote a single yearly tuition
-  // number (rather than splitting into Term I/II/III) live here.
+  // per-row Fees amount into — institutions that quote a single yearly
+  // figure (rather than splitting it) live here.
   { key: "annual",      label: "Annual Fees" },
   { key: "application", label: "Admission Fees" },
-  { key: "kit",         label: "Kit Fees" },
-  { key: "eca",         label: "ECA" },
-  { key: "uniform",     label: "Uniform" },
+  { key: "tuition",     label: "Tuition Fees" },
+
+  // School heads
   { key: "term1",       label: "Term I" },
   { key: "term2",       label: "Term II" },
   { key: "term3",       label: "Term III" },
-  { key: "transport",   label: "Transport" },
+  { key: "kit",         label: "Kit Fees" },
+  { key: "uniform",     label: "Uniform" },
+  { key: "eca",         label: "ECA" },
   { key: "stem",        label: "STEM Fees" },
   { key: "annualday",   label: "Annual Day" },
+
+  // College heads
+  { key: "semester1",   label: "Semester I Fees" },
+  { key: "semester2",   label: "Semester II Fees" },
+  { key: "hostel",      label: "Hostel Fees" },
+  { key: "lab",         label: "Laboratory Fees" },
+  { key: "exam",        label: "Examination Fees" },
+  { key: "library",     label: "Library Fees" },
+
+  // Charged by both
+  { key: "transport",   label: "Transport" },
 ];
 
 const FEE_TYPE_BY_KEY = Object.fromEntries(FEE_TYPES.map((t) => [t.key, t]));
@@ -44,6 +85,67 @@ export function feeTypeLabel(key) {
 export function normalizeFeeType(raw) {
   const k = String(raw || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
   return FEE_TYPE_BY_KEY[k] ? k : "term1";
+}
+
+// ---------------------------------------------------------------------------
+// Guardian contact
+//
+// `parentPhone` is the real column. Before it existed the number was typed
+// into the free-form `parent` name ("Mr Suresh - 9876543210") and every
+// sender dug it out with its own regex; this keeps that fallback in one
+// place so older rows still reach a parent, and new rows do not depend on
+// anyone formatting a name correctly.
+// ---------------------------------------------------------------------------
+
+/** Ten-digit Indian mobile for a student's guardian, or null. */
+export function guardianPhone(student) {
+  if (!student) return null;
+  const direct = String(student.parentPhone ?? student.parent_phone ?? "").replace(/\D/g, "");
+  const scraped = String(student.parent ?? "").replace(/\D/g, "");
+  for (const candidate of [direct, scraped]) {
+    const ten = candidate.slice(-10);
+    if (ten.length === 10 && /^[6-9]/.test(ten)) return ten;
+  }
+  return null;
+}
+
+/** The guardian's name with any trailing phone number stripped off. */
+export function guardianName(student) {
+  const raw = String(student?.parent ?? "").trim();
+  if (!raw) return "";
+  return raw.replace(/[\s·,-]*\+?\d[\d\s-]{8,}$/, "").trim() || raw;
+}
+
+/** "Dear Father" / "Dear Guardian" — how a message should open. */
+export function guardianSalutation(student) {
+  const rel = String(student?.parentRelation ?? student?.parent_relation ?? "").trim();
+  return rel || "Parent";
+}
+
+// ---------------------------------------------------------------------------
+// Who counts as teaching staff
+//
+// The job title differs by institution: a school has Teachers, Senior
+// Teachers and a Headmistress; a college has Assistant Professors, an
+// Associate Professor and a Professor & Head. A /teach/i test covers the
+// first list and none of the second, which left the college's staff
+// attendance card dividing by zero.
+//
+// Matching on titles rather than departments because a Lab Assistant sits
+// in the Science department without teaching, and a Physical Education
+// teacher teaches without sitting in an academic one.
+// ---------------------------------------------------------------------------
+const TEACHING_TITLE = /(teacher|professor|faculty|lecturer|tutor|headmistress|headmaster|principal|coordinator|dean)/i;
+// Titles that read as academic but describe support work. "Lab Assistant"
+// and "Lab Instructor" keep the labs running rather than taking classes.
+const NON_TEACHING_TITLE = /(assistant|attender|driver|technician|warden|clerk|nurse|superintendent|librarian|instructor)/i;
+
+/** True when this staff role is a teaching one, in either institution. */
+export function isTeachingRole(role) {
+  const r = String(role || "");
+  if (!r) return false;
+  if (NON_TEACHING_TITLE.test(r) && !/professor|teacher/i.test(r)) return false;
+  return TEACHING_TITLE.test(r);
 }
 
 // Class-label rendering. The on-disk shape stays "N-X" (e.g. "5-A", "13-A")

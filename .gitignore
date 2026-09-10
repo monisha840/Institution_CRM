@@ -15,3 +15,12 @@ DEPLOYMENT.md
 data/db.json.backup-*
 .vercel
 .env*
+
+# Local Supabase dumps taken before migrations / re-seeds
+backups/
+
+# Working credentials written by the seeder
+docs/credentials.md
+
+# Alternate build dirs used when a second Next process runs alongside
+.next-*

@@ -5,6 +5,8 @@ import { getSession } from "@/lib/auth";
 import { notifyWhatsApp } from "@/lib/whatsapp";
 import { feeTypeLabel } from "@/lib/format";
 import { renderBrandedQrBase64 } from "@/lib/qr-image";
+import { tenantConfig } from "@/lib/tenants";
+import { currentTenant } from "@/lib/tenant-context";
 
 // POST /api/fees/send-qr
 //   { id: <pendingFeeId>, amount: <int>, method?: "UPI" }
@@ -49,8 +51,8 @@ export async function POST(req) {
   // UPI handle + payee name come from the same Settings row the on-screen
   // QR uses, so the WhatsApp QR is identical to the one shown in-office.
   const settings = await readSettings();
-  const upiId     = settings?.finance?.upi || "sirahdemo@hdfc";
-  const payeeName = settings?.finance?.upiPayeeName || "Sirah Demo School";
+  const upiId     = settings?.finance?.upi || tenantConfig(currentTenant()).upi;
+  const payeeName = settings?.finance?.upiPayeeName || tenantConfig(currentTenant()).upiPayeeName;
 
   // Build the standard UPI deep-link with the amount + a transaction note
   // so the parent's UPI app opens pre-filled.
@@ -87,7 +89,7 @@ export async function POST(req) {
     `Ref:    ${fee.id}`,
     "",
     "Open the image in any UPI app to pay. Receipt will be issued automatically once we receive it.",
-    "— Sirah Demo School",
+    `— ${tenantConfig(currentTenant()).name}`,
   ].filter(Boolean).join("\n");
 
   const result = await notifyWhatsApp("fee_qr_send", {

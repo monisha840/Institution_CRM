@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { notifyWhatsApp, whatsappEnvStatus } from "@/lib/whatsapp";
 import { logAudit } from "@/lib/db";
+import { tenantConfig } from "@/lib/tenants";
+import { currentTenant } from "@/lib/tenant-context";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +37,7 @@ export async function POST(req) {
 
   const message =
     body?.message?.trim() ||
-    `Test message from Sirah Demo School CRM at ${new Date().toLocaleString("en-IN")}.`;
+    `Test message from ${tenantConfig(currentTenant()).name} at ${new Date().toLocaleString("en-IN")}.`;
 
   const result = await notifyWhatsApp("test", { phone, message });
   try {

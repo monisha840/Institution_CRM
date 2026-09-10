@@ -29,6 +29,7 @@ export const ALL_FEATURES = [
   { id: "students",      label: "Students / My students",     group: "People" },
   { id: "classes",       label: "Classes",                    group: "People" },
   { id: "attendance",    label: "Attendance",                 group: "People" },
+  { id: "eligibility",   label: "Attendance shortage & eligibility", group: "People" },
   { id: "academic",      label: "Academic / Class tracker",   group: "People" },
   { id: "staff",         label: "Staff",                      group: "People" },
   { id: "transport",     label: "Transport",                  group: "Operations" },

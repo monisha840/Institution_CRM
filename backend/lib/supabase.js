@@ -2,6 +2,7 @@
 // it can bypass RLS. Falls back to the anon key for read-only fetches.
 import { createClient } from "@supabase/supabase-js";
 import dns from "node:dns";
+import { currentTenant } from "./tenant-context.js";
 
 // Prefer IPv4 when resolving hostnames. On some hosts the IPv6 path to Supabase
 // stalls, so a DB call intermittently hangs ~20s before falling back — which
@@ -62,12 +63,111 @@ const supabaseFetch = async (input, init = {}) => {
   throw lastErr;
 };
 
-export const supabase = supabaseEnabled
+const rawClient = supabaseEnabled
   ? createClient(url, serviceKey || anonKey, {
       auth: { persistSession: false, autoRefreshToken: false },
       global: { fetch: supabaseFetch },
     })
   : null;
+
+// ---------------------------------------------------------------------------
+// Tenant scoping
+//
+// This deployment serves two institutions out of one database. Every data
+// table carries a `tenant` column, and every read must filter on it while
+// every write must stamp it — with no exceptions, because one missed filter
+// leaks a school's students into the college.
+//
+// Rather than edit ~300 call sites in db.js (and rely on nobody forgetting
+// the filter in the next one), the scope is applied here, once, by wrapping
+// the client's `from()`. Call sites stay exactly as they were.
+//
+// The wrapper only intercepts the five methods PostgrestQueryBuilder exposes.
+// Each of them returns a *new* PostgrestFilterBuilder, which is handed back
+// unwrapped — so everything downstream (`.eq()`, `.order()`, `.single()`, the
+// `.select()` that follows an insert to get the row back) behaves normally
+// and is never double-filtered.
+// ---------------------------------------------------------------------------
+
+// Tables that are genuinely shared across institutions. Empty today: even
+// reference data like `subjects` and `classes` differs between the school
+// and the college, so all of it is tenant-owned. Kept as an explicit hook so
+// a future global table is a one-line change and an obvious review point.
+const GLOBAL_TABLES = new Set();
+
+// An upsert's conflict target has to include the tenant, or the school's
+// "Class 1" and the college's "Semester 1" collide on the same key. The
+// matching composite unique indexes are created by the tenancy migration.
+function scopeConflictTarget(onConflict) {
+  const cols = String(onConflict)
+    .split(",")
+    .map((c) => c.trim())
+    .filter(Boolean);
+  if (cols.includes("tenant")) return cols.join(",");
+  return ["tenant", ...cols].join(",");
+}
+
+function scopeBuilder(builder, tenant) {
+  return new Proxy(builder, {
+    get(target, prop, receiver) {
+      const value = Reflect.get(target, prop, receiver);
+      if (typeof value !== "function") return value;
+
+      // Reads and targeted writes: append the tenant filter.
+      if (prop === "select" || prop === "update" || prop === "delete") {
+        return (...args) => value.apply(target, args).eq("tenant", tenant);
+      }
+
+      // Inserts: stamp the tenant onto every row, single or bulk.
+      if (prop === "insert" || prop === "upsert") {
+        return (rows, options) => {
+          const stamp = (r) => ({ ...r, tenant });
+          const payload = Array.isArray(rows) ? rows.map(stamp) : stamp(rows);
+          const opts =
+            prop === "upsert" && options?.onConflict
+              ? { ...options, onConflict: scopeConflictTarget(options.onConflict) }
+              : options;
+          return opts === undefined
+            ? value.apply(target, [payload])
+            : value.apply(target, [payload, opts]);
+        };
+      }
+
+      return value.bind(target);
+    },
+  });
+}
+
+/**
+ * The Supabase client every caller should use.
+ *
+ * Identical to a plain supabase-js client except that `from(table)` is scoped
+ * to the request's tenant. Resolving the tenant lazily — at from() time, not
+ * at import time — is what lets one module-level client serve concurrent
+ * requests for different institutions.
+ */
+export const supabase = rawClient
+  ? new Proxy(rawClient, {
+      get(target, prop, receiver) {
+        if (prop !== "from") return Reflect.get(target, prop, receiver);
+        return (table) => {
+          const builder = target.from(table);
+          if (GLOBAL_TABLES.has(table)) return builder;
+          return scopeBuilder(builder, currentTenant());
+        };
+      },
+    })
+  : null;
+
+/**
+ * Escape hatch: the unscoped client, for the few operations that legitimately
+ * span institutions — the tenancy migration, the seeder, and resolving a
+ * login before a session (and therefore a tenant) exists.
+ *
+ * Anything using this is responsible for its own `tenant` filtering. Prefer
+ * runAsTenant() from lib/tenant-context.js, which keeps the scoping automatic.
+ */
+export const supabaseUnscoped = rawClient;
 
 // Mapping from snake_case columns to camelCase JSON shape used by screens.
 // `transport` + `pickupStop` are the MORNING route. Evening lives in
@@ -77,6 +177,12 @@ export const supabase = supabaseEnabled
 // UI treats null as "same as morning" so legacy students still board.
 export const fromStudent = (r) => r && {
   id: r.id, name: r.name, cls: r.cls, parent: r.parent,
+  // Guardian contact, first-class columns as of the 2026-09-10 migration.
+  // Rows written before it have these null and fall back to the number
+  // embedded in `parent` — see guardianPhone() in lib/format.js.
+  parentPhone: r.parent_phone ?? r.parentPhone ?? null,
+  parentEmail: r.parent_email ?? r.parentEmail ?? null,
+  parentRelation: r.parent_relation ?? r.parentRelation ?? null,
   fee: r.fee, attendance: r.attendance, transport: r.transport,
   pickupStop: r.pickup_stop ?? r.pickupStop ?? null,
   transportEvening: r.transport_evening ?? r.transportEvening ?? null,
@@ -89,6 +195,9 @@ export const fromStudent = (r) => r && {
 };
 export const toStudent = (r) => ({
   id: r.id, name: r.name, cls: r.cls, parent: r.parent ?? "—",
+  parent_phone: r.parentPhone ?? r.parent_phone ?? null,
+  parent_email: r.parentEmail ?? r.parent_email ?? null,
+  parent_relation: r.parentRelation ?? r.parent_relation ?? null,
   fee: r.fee ?? "pending", attendance: r.attendance ?? 0,
   transport: r.transport ?? "—",
   pickup_stop: r.pickupStop ?? null,

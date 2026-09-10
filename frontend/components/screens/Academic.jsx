@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../Icon";
 import { resolveSchool, downloadPdf } from "@/lib/export";
 import { formatClassLabel, getWorkingDays, getHolidayDates, attendanceFromLogs } from "@/backend/lib/format.js";
-import { KPI, AvatarChip } from "../ui";
+import { KPI, AvatarChip, ScreenToast as Toast, EmptyState, PageHeader } from "../ui";
 import QuickAccessRecent from "../QuickAccessRecent";
 
 // Build the last 8 week-start dates relative to today. Computed lazily on
@@ -561,14 +561,9 @@ export default function ScreenAcademic({ E, refresh, role, session, onOpenItem }
     <div className="page">
       <Toast toast={toast} />
 
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">People · Academic tracker</div>
-          <div className="page-title">Academic <span className="amber">tracker</span></div>
-          <div className="page-sub">Class → Student → Daily log. Teachers post daily; monthly summary auto-generates to parents.</div>
-        </div>
-        <div className="page-actions">
-          <div style={{ position: "relative" }}>
+      <PageHeader
+        sub={"Class → Student → Daily log. Teachers post daily; monthly summary auto-generates to parents."}
+        actions={<><div style={{ position: "relative" }}>
             <button className="btn" onClick={() => setWeekOpen((v) => !v)}>
               <Icon name="calendar" size={13} />Week of {week.short}
               <Icon name="chevronDown" size={11} />
@@ -600,9 +595,8 @@ export default function ScreenAcademic({ E, refresh, role, session, onOpenItem }
                 <Icon name="plus" size={13} />Log today
               </button>
             </>
-          )}
-        </div>
-      </div>
+          )}</>}
+      />
 
       <QuickAccessRecent role={role} session={session} onOpenItem={onOpenItem} />
 
@@ -704,7 +698,11 @@ export default function ScreenAcademic({ E, refresh, role, session, onOpenItem }
           </div>
           <div style={{ maxHeight: 620, overflowY: "auto" }}>
             {roster.length === 0 && (
-              <div className="empty">No students in {formatClassLabel(`${cls}-${sec}`)} yet. Add some on the Students screen.</div>
+              <EmptyState
+                icon="students"
+                title={`No students in ${formatClassLabel(`${cls}-${sec}`)}`}
+                body="Admit students to this class on the Students screen and they will appear here for the daily log."
+              />
             )}
             {roster.map((s, i) => {
               const act = i === selectedStudent;
@@ -935,7 +933,11 @@ export default function ScreenAcademic({ E, refresh, role, session, onOpenItem }
               </div>
               <div className="card-body" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {!isUserSaved && (
-                  <div className="empty" style={{ padding: 24 }}>Nothing posted for {student.name} today.</div>
+                  <EmptyState
+                icon="academic"
+                title="Nothing posted today"
+                body={`Once the class teacher submits today's log, ${student.name}'s attendance, classwork and homework appear here.`}
+              />
                 )}
                 {isUserSaved && (() => {
                   const absent = logToShow.attendance === "absent";
@@ -1193,17 +1195,6 @@ function AnnounceClassModal({ cls, recipientCount, teacherName, onClose, onSent 
 }
 
 // ---------- helpers ----------
-function Toast({ toast }) {
-  if (!toast) return null;
-  const bg = toast.tone === "bad" ? "var(--bad)" : "var(--ok)";
-  return (
-    <div style={{
-      position: "fixed", top: 76, left: "50%", transform: "translateX(-50%)",
-      zIndex: 300, background: bg, color: "#fff", padding: "10px 18px",
-      borderRadius: 999, fontSize: 12.5, fontWeight: 500, boxShadow: "var(--shadow-lg)",
-    }}>{toast.msg}</div>
-  );
-}
 
 function GrowthModal({ student, onClose, onSubmit }) {
   const [heightCm, setHeightCm] = useState(student?.heightCm != null ? String(student.heightCm) : "");
@@ -1407,7 +1398,11 @@ function LogModal({ student, cls, existing, today, classSubjects = [], onClose, 
                 Subjects · classwork &amp; homework
               </div>
               {!isAbsent && classSubjects.length === 0 && (
-                <div className="empty" style={{ padding: 12 }}>No subjects set for this class. Add them under Classes → Edit.</div>
+                <EmptyState
+                  icon="book"
+                  title="No subjects for this class"
+                  body="Add subjects under Classes → Edit; the daily log and exam marks both read from that list."
+                />
               )}
               {form.subjectLogs.map((row, idx) => (
                 <div

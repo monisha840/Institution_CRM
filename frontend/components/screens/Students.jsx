@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../Icon";
-import { KPI, AvatarChip, StatusChip, EmptyState, SearchInput } from "../ui";
+import { KPI, AvatarChip, StatusChip, EmptyState, SearchInput, ScreenToast as Toast, ModalShell, PageHeader } from "../ui";
 import DocumentsPanel from "../DocumentsPanel";
 import CredentialsModal from "../CredentialsModal";
 import { resolveSchool, downloadPdf } from "@/lib/export";
-import { formatClassLabel, feeTypeLabel } from "@/backend/lib/format.js";
+import { formatClassLabel, feeTypeLabel, guardianName } from "@/backend/lib/format.js";
 
 // Section is fixed to "A" under the hood — storage keeps "N-A" so the
 // dozens of split("-") readers across the app stay valid, but no UI
@@ -15,6 +15,17 @@ const ONLY_SECTION = "A";
 
 export default function ScreenStudents({ E, refresh, role, session, searchFocus, clearSearchFocus }) {
   const school = resolveSchool(E?.SETTINGS);
+
+  // The Indian academic year runs June to May. Anchoring on it means "new
+  // admissions" is a real subset rather than a second copy of the roll —
+  // this tile used to render `roster.length`, so it always showed exactly
+  // the same figure as "Enrolled" right beside it.
+  const yearStart = (() => {
+    const now = new Date();
+    const y = now.getMonth() >= 5 ? now.getFullYear() : now.getFullYear() - 1;
+    return new Date(Date.UTC(y, 5, 1));
+  })();
+  const academicYearLabel = `${yearStart.getUTCFullYear()}-${String((yearStart.getUTCFullYear() + 1) % 100).padStart(2, "0")}`;
   const actor  = session?.name || null;
   // Teachers, principals and admin can edit student details. Parents cannot —
   // they can't even see this screen on the current nav, but the gate is
@@ -62,6 +73,13 @@ export default function ScreenStudents({ E, refresh, role, session, searchFocus,
   const activeRoster   = (E.ADDED_STUDENTS    || []).map((s) => ({ ...s, __added: true, __status: "active" }));
   const archivedRoster = (E.ARCHIVED_STUDENTS || []).map((s) => ({ ...s, __added: true, __status: "archived" }));
   const roster = view === "archived" ? archivedRoster : activeRoster;
+
+  // Students admitted during the current academic year, newest first.
+  // Always drawn from the active roll, so switching to the Archived tab
+  // doesn't turn this into a count of who left.
+  const newAdmissions = activeRoster
+    .filter((st) => st.joined && new Date(st.joined) >= yearStart)
+    .sort((a, b) => String(b.joined).localeCompare(String(a.joined)));
 
   // Global search deep-link: when a user clicks a student in the topbar
   // search dropdown, AppShell sets searchFocus={type:"student", id, ...}.
@@ -396,20 +414,12 @@ export default function ScreenStudents({ E, refresh, role, session, searchFocus,
     <div className="page">
       <Toast toast={toast} />
 
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">People</div>
-          <div className="page-title">Students</div>
-          <div className="page-sub">
-            Every child on roll, their class, fee position and transport — searchable and filterable.
-          </div>
-        </div>
-        <div className="page-actions">
-          <button className="btn" onClick={() => setShowImport(true)}><Icon name="upload" size={13} />Import</button>
+      <PageHeader
+        sub={"Every child on roll, their class, fee position and transport — searchable and filterable."}
+        actions={<><button className="btn" onClick={() => setShowImport(true)}><Icon name="upload" size={13} />Import</button>
           <button className="btn" onClick={exportPdf} title="Open a printable, branded PDF report"><Icon name="download" size={13} />Export PDF</button>
-          <button className="btn accent" onClick={() => setShowAdmission(true)}><Icon name="plus" size={13} />New admission</button>
-        </div>
-      </div>
+          <button className="btn accent" onClick={() => setShowAdmission(true)}><Icon name="plus" size={13} />New admission</button></>}
+      />
 
       <div className="grid g-4" style={{ marginBottom: 14 }}>
         <KPI
@@ -426,12 +436,13 @@ export default function ScreenStudents({ E, refresh, role, session, searchFocus,
           }}
         />
         <KPI
-          label="New admissions" value={roster.length} sub="this session"
+          label="New admissions" value={newAdmissions.length}
+          sub={newAdmissions.length ? `joined in ${academicYearLabel}` : `none yet in ${academicYearLabel}`}
           puck="peach" puckIcon="enquiry"
           details={{
-            title: `Admissions · ${roster.length} this session`,
-            sub: "Recent admissions, newest first",
-            items: roster.slice(0, 10).map((s) => ({
+            title: `Admissions · ${newAdmissions.length} in ${academicYearLabel}`,
+            sub: "Newest first",
+            items: newAdmissions.slice(0, 12).map((s) => ({
               label: s.name,
               value: s.joined,
               sub: `${formatClassLabel(s.cls)} · ${s.id}`,
@@ -779,6 +790,7 @@ export default function ScreenStudents({ E, refresh, role, session, searchFocus,
       )}
       {messageStudent && (
         <MessageParentModal
+          school={school}
           student={messageStudent}
           onClose={() => setMessageStudent(null)}
           flash={flash}
@@ -839,17 +851,6 @@ export default function ScreenStudents({ E, refresh, role, session, searchFocus,
 }
 
 // ---------- helpers ----------
-function Toast({ toast }) {
-  if (!toast) return null;
-  const bg = toast.tone === "bad" ? "var(--bad)" : toast.tone === "warn" ? "var(--warn)" : "var(--ok)";
-  return (
-    <div style={{
-      position: "fixed", top: 76, left: "50%", transform: "translateX(-50%)",
-      zIndex: 300, background: bg, color: "#fff", padding: "10px 18px",
-      borderRadius: 999, fontSize: 12.5, fontWeight: 500, boxShadow: "var(--shadow-lg)",
-    }}>{toast.msg}</div>
-  );
-}
 
 // Render the fee cell in the Students table. Two stacked lines — one
 // for the academic fee, one for the transport fee. Each line shows the
@@ -1202,33 +1203,6 @@ function RowMenu({ student, anchor, canEdit, onClose, onView, onEdit, onTC, onMe
   );
 }
 
-function ModalShell({ title, sub, onClose, children, width = 460 }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed", inset: 0, background: "var(--overlay)",
-        display: "grid", placeItems: "center", zIndex: 250, padding: 16,
-      }}
-    >
-      <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: width }}>
-        <div className="card-head">
-          <div>
-            <div className="card-title">{title}</div>
-            {sub && <div className="card-sub">{sub}</div>}
-          </div>
-          <button className="icon-btn" onClick={onClose}><Icon name="x" size={14} /></button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 // Edit an existing student's core details. Mirrors the validation used by the
 // admission form so back-and-forth edits don't smuggle in bad phone numbers.
@@ -1295,7 +1269,7 @@ function EditStudentModal({ student, classes = [], routes = [], students = [], o
   };
 
   return (
-    <ModalShell title="Edit student" sub={`${student.id} · joined ${student.joined}`} onClose={onClose}>
+    <ModalShell width={460} title="Edit student" sub={`${student.id} · joined ${student.joined}`} onClose={onClose}>
       <form onSubmit={submit} className="card-body" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <Field label="Student full name *">
           <input
@@ -1461,7 +1435,7 @@ function AdmissionModal({ classes = [], routes = [], students = [], onClose, onS
   };
 
   return (
-    <ModalShell title="New admission" sub="Auto-assigned ID · auto fee schedule" onClose={onClose}>
+    <ModalShell width={460} title="New admission" sub="Auto-assigned ID · auto fee schedule" onClose={onClose}>
       <form onSubmit={submit} className="card-body" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <Field label="Student full name *">
           <input
@@ -1764,7 +1738,7 @@ function BulkLoginsModal({ logins, onClose, flash }) {
   };
 
   return (
-    <ModalShell
+    <ModalShell width={460}
       title={`${count} parent login${count === 1 ? "" : "s"} created`}
       subtitle="Download the CSV now — passwords are hashed after this dialog closes and can't be recovered."
       onClose={onClose}
@@ -1777,9 +1751,9 @@ function BulkLoginsModal({ logins, onClose, flash }) {
           fontSize: 12, lineHeight: 1.45,
           padding: "10px 12px", borderRadius: 8,
         }}>
-          <strong>Security note:</strong> these passwords follow a predictable
-          <code style={{ margin: "0 4px", fontSize: 11 }}>FirstName@123</code>
-          pattern. Ask each parent to change their password after first sign-in.
+          <strong>Hand these over securely.</strong> Each password is generated
+          once and stored only as a hash — it cannot be read back later. If one
+          is lost, issue a new one from Users &amp; Roles → Reset password.
         </div>
 
         <div style={{
@@ -1851,7 +1825,7 @@ function ImportModal({ onClose, onFile }) {
     URL.revokeObjectURL(url);
   };
   return (
-    <ModalShell
+    <ModalShell width={460}
       title={phase === "done" ? "Import successful" : "Import students"}
       sub={
         phase === "done"
@@ -2140,7 +2114,7 @@ function ProfileModal({ student, onClose, onMessage, onTC, hideContact = false, 
     if (!report) return;
     const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     const s = report.student || student;
-    const schoolName = school?.name || "Sirah Demo School";
+    const schoolName = school?.name || "";
     const cell = (v, num) => `<td style="padding:4px 6px;border-bottom:1px solid #eee;${num ? "text-align:right" : ""}">${esc(v)}</td>`;
     const th = (h) => `<th style="text-align:left;padding:4px 6px;border-bottom:1px solid #bbb;color:#555;font-weight:600">${esc(h)}</th>`;
     const table = (headers, rowsArr) => `<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:4px"><thead><tr>${headers.map(th).join("")}</tr></thead><tbody>${rowsArr.length ? rowsArr.join("") : `<tr><td colspan="${headers.length}" style="padding:6px;color:#999">None</td></tr>`}</tbody></table>`;
@@ -2458,19 +2432,23 @@ function EditPhoneModal({ student, onClose, onSubmit }) {
 // the API. Staff can copy email + password and hand them to the parent.
 // Compose-and-send WhatsApp message to a parent. Uses Evolution API directly
 // via /api/parents/message. Template suggestions can be picked or edited.
-function MessageParentModal({ student, onClose, flash }) {
+function MessageParentModal({ student, school, onClose, flash }) {
+  // Addressed to the guardian by name where we have one, and signed with
+  // the institution's actual name rather than a baked-in string.
+  const who = guardianName(student) || "Parent";
+  const from = school?.name || "the school office";
   const TEMPLATES = [
     {
       label: "General check-in",
-      body: `Dear Parent,\n\nThis is a quick note from Sirah Demo School regarding ${student.name} (${formatClassLabel(student.cls)}). Please feel free to reach out if you have any questions.\n\n— Sirah Demo School`,
+      body: `Dear ${who},\n\nThis is a quick note from ${from} regarding ${student.name} (${formatClassLabel(student.cls)}). Please feel free to reach out if you have any questions.\n\n— ${from}`,
     },
     {
       label: "Request a meeting",
-      body: `Dear Parent,\n\nWe would like to meet with you regarding ${student.name} (${formatClassLabel(student.cls)}). Please let us know a convenient time this week.\n\n— Sirah Demo School`,
+      body: `Dear ${who},\n\nWe would like to meet with you regarding ${student.name} (${formatClassLabel(student.cls)}). Please let us know a convenient time this week.\n\n— ${from}`,
     },
     {
       label: "Attendance follow-up",
-      body: `Dear Parent,\n\n${student.name} (${formatClassLabel(student.cls)}) was marked absent recently. Kindly let us know the reason or share an update.\n\n— Sirah Demo School`,
+      body: `Dear ${who},\n\n${student.name} (${formatClassLabel(student.cls)}) was marked absent recently. Kindly let us know the reason or share an update.\n\n— ${from}`,
     },
   ];
   const [body, setBody] = useState(TEMPLATES[0].body);

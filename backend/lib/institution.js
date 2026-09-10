@@ -1,14 +1,31 @@
 // Institution mode — school vs college.
 //
-// Sirah_CRM ships one codebase that presents as either a school or a college.
-// The data model is deliberately unchanged between the two: a "class" row and
-// a "semester" row are the same record, and `cls` keys stay numeric ("3-A") in
-// both modes. Only the vocabulary and the academic framing differ, which keeps
-// every existing query, screen and write path working in both modes.
+// Sirah CRM serves two institutions from one codebase and one database. The
+// mode is a property of the *tenant* (see lib/tenants.js), not a setting that
+// gets toggled at runtime: the school tenant is always a school and the
+// college tenant is always a college. Each has its own students, classes,
+// subjects, staff and fee structure; nothing is shared.
 //
-// The mode lives in app_settings under school.institutionType and is read once
-// per session. A deployment is one institution, so a module-level current mode
-// is correct here — there is no per-request variance to guard against.
+// What this module owns is the vocabulary and the academic rules that differ
+// between the two — Class vs Semester, Parent vs Guardian, marks vs
+// credit-weighted GPA. It is deliberately pure so that client components can
+// import it: no next/headers, no async_hooks, no database.
+//
+// Resolving the mode:
+//
+//   Server — derive it from the request's tenant. `institutionTypeFor()`
+//            takes a tenant id, and every server helper that needs the
+//            vocabulary accepts an explicit `type`. Nothing reads module
+//            state, because one Node process serves both institutions
+//            concurrently and a module-level "current mode" would let one
+//            request's tenant bleed into another's response.
+//
+//   Client — one browser is signed in to exactly one tenant for the life of
+//            the session, so the module-level default set by AppShell via
+//            setInstitutionType() is safe there and saves threading `type`
+//            through several hundred call sites.
+
+import { tenantInstitutionType } from "./tenants.js";
 
 export const INSTITUTION_TYPES = ["school", "college"];
 
@@ -60,6 +77,27 @@ export const VOCAB = {
   },
 };
 
+/**
+ * The mode a tenant presents as. This is the server-side answer — pure,
+ * derived straight from the tenant registry, safe under concurrency.
+ */
+export function institutionTypeFor(tenantId) {
+  return tenantInstitutionType(tenantId);
+}
+
+// ---------------------------------------------------------------------------
+// Client-side default.
+//
+// CLIENT ONLY. AppShell sets this once from the signed-in session's tenant so
+// that the hundreds of `vocab()` / `formatClassLabel()` calls inside screens
+// don't each have to be handed a type. That is sound in a browser, where the
+// module is per-page and the user is signed in to one institution.
+//
+// Do NOT rely on it in server code — a Node process serves both institutions
+// at once, so whatever the last request happened to set is not what the
+// current request means. Server callers pass an explicit `type`, sourced from
+// institutionTypeFor(currentTenant()).
+// ---------------------------------------------------------------------------
 let CURRENT = "school";
 
 export function setInstitutionType(t) {
@@ -71,23 +109,31 @@ export function getInstitutionType() {
   return CURRENT;
 }
 
-/** Resolve the mode out of a settings object, falling back to school. */
-export function institutionTypeFromSettings(settings) {
+/**
+ * Resolve the mode out of a settings object.
+ *
+ * Retained for the settings-driven path, but the tenant is now the
+ * authority: institutionTypeFor(tenantId) is what server code should use,
+ * and a tenant's mode is fixed rather than toggled. This still tolerates a
+ * value that an older seed wrote JSON-encoded ('"college"'), since settings
+ * are otherwise stored raw and a stray pair of quotes would silently pin the
+ * whole app back to school mode.
+ */
+export function institutionTypeFromSettings(settings, fallback = "school") {
   let raw = settings?.school?.institutionType ?? settings?.school?.institution_type;
-  if (typeof raw !== "string") return "school";
+  if (typeof raw !== "string") return fallback;
   raw = raw.trim();
-  // Tolerate a value that was written JSON-encoded ('"college"') by an older
-  // seed — settings are otherwise stored raw, and a stray pair of quotes
-  // would silently pin the whole app back to school mode.
   if (raw.length > 1 && raw[0] === '"' && raw[raw.length - 1] === '"') {
     raw = raw.slice(1, -1);
   }
-  return INSTITUTION_TYPES.includes(raw) ? raw : "school";
+  return INSTITUTION_TYPES.includes(raw) ? raw : fallback;
 }
 
 
-// The institution's display name, set from settings alongside the mode so the
-// sidebar brand reads "Sirah Demo College" instead of a hardcoded string.
+// The institution's display name. CLIENT ONLY, same reasoning as CURRENT
+// above — AppShell sets it once from the session's tenant so the sidebar
+// brand and the page chrome can read it without prop-drilling. Server code
+// should read tenantConfig(tenantId).name directly.
 let CURRENT_NAME = "";
 
 export function setInstitutionName(n) {
@@ -96,7 +142,7 @@ export function setInstitutionName(n) {
 }
 
 export function institutionName() {
-  return CURRENT_NAME || (CURRENT === "college" ? "Sirah College" : "Sirah School");
+  return CURRENT_NAME || (CURRENT === "college" ? "Sirah Institute of Technology" : "Sirah Vidyalaya");
 }
 
 /** Split the name into a lead word and the remainder, for two-tone branding. */

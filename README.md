@@ -1,11 +1,45 @@
-# Sirah_CRM · School CRM
+# Sirah CRM
 
-Fullstack Next.js school ERP / CRM. Two pluggable persistence backends:
-**Supabase** for production (Postgres + RLS) and a local **JSON file** for
-zero-config dev. The app picks the backend at boot from environment variables.
+Fullstack Next.js ERP / CRM for schools and colleges. Two pluggable
+persistence backends: **Supabase** for production (Postgres + RLS) and a
+local **JSON file** for zero-config dev. The app picks the backend at boot
+from environment variables.
 
 **Stack:** Next.js 14 (App Router) · React 18 · `@supabase/supabase-js` · API
 routes for every server-side write.
+
+## Two institutions, one deployment
+
+This build is multi-tenant. One database serves two entirely separate
+institutions — a school and a college — that share no rows:
+
+| | Tenant `school` | Tenant `college` |
+| --- | --- | --- |
+| Institution | Sirah Vidyalaya | Sirah Institute of Technology |
+| Shape | Class I–XII, three terms | Semesters 1–8, three departments |
+| Grading | Marks out of 100 | Credit-weighted GPA, 10-point scale |
+| People | Parents, teachers | Guardians, faculty |
+| Leaving doc | Transfer certificate | Migration certificate |
+
+You pick the institution on the login screen. The choice is signed into the
+session, verified in middleware, and applied to every query by the `from()`
+wrapper in [backend/lib/supabase.js](backend/lib/supabase.js) — every read
+filters on `tenant`, every write stamps it. Institution identity (name,
+address, bank details, affiliation) lives in
+[backend/lib/tenants.js](backend/lib/tenants.js).
+
+### Setting it up
+
+```bash
+node scripts/backup-supabase.js     # always first — the seeder is destructive
+# then run these two in the Supabase SQL editor:
+#   backend/migrations/2026-09-10-multi-tenancy.sql
+#   backend/migrations/2026-09-10-guardian-contact.sql
+node scripts/verify-seed.js         # 30 checks on the generated data
+node scripts/seed-tenants.js        # writes both institutions
+```
+
+Sign-in credentials are written to `docs/credentials.md` (gitignored).
 
 ## Run (no Supabase, file backend)
 

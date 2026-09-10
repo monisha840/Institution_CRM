@@ -1,0 +1,4 @@
+{
+  "//": "These seed modules are ES modules. The rest of scripts/ is CommonJS, and the project root has no \"type\", so this marks the boundary and keeps Node from re-parsing each file with a warning.",
+  "type": "module"
+}

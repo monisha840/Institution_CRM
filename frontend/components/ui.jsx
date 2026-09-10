@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Icon from "./Icon";
 
 /* ==========================================================================
@@ -15,19 +15,47 @@ import Icon from "./Icon";
    Layout primitives
    -------------------------------------------------------------------------- */
 
-// Standard page header. `eyebrow` carries the date/context line, `title` the
-// screen name, `sub` the one-line explanation, `actions` the buttons.
-export const PageHeader = ({ eyebrow, title, sub, actions, children }) => (
-  <div className="page-head">
-    <div style={{ minWidth: 0 }}>
-      {eyebrow ? <div className="page-eyebrow">{eyebrow}</div> : null}
-      <div className="page-title">{title}</div>
-      {sub ? <div className="page-sub">{sub}</div> : null}
-      {children}
+/**
+ * Where the current screen sits in the navigation, published by AppShell.
+ *
+ * Screens should not have to know, or repeat, their own section and label.
+ * They did before, and it showed: 29 different eyebrows across 31 pages,
+ * and titles that disagreed with the nav item you clicked to get there.
+ */
+export const ScreenContext = createContext({ section: null, label: null });
+
+export const useScreenMeta = () => useContext(ScreenContext);
+
+/**
+ * The page header every screen uses.
+ *
+ * `eyebrow` and `title` both default to the navigation, so the common case
+ * is just a `sub` and some `actions`. Pass them explicitly only when a
+ * screen genuinely shows something the nav item does not describe — the
+ * Dashboard's greeting, for instance.
+ *
+ * `children` render *below* the sub line inside the title column. Reserve
+ * that for something that belongs to the heading itself; page content goes
+ * in the page body. Two screens used it for status chips and a whole
+ * ageing widget, which made their headers two and a half times taller than
+ * every other screen's and pushed the action buttons far up the page.
+ */
+export const PageHeader = ({ eyebrow, title, sub, actions, children }) => {
+  const meta = useScreenMeta();
+  const resolvedEyebrow = eyebrow !== undefined ? eyebrow : meta.section;
+  const resolvedTitle = title !== undefined ? title : meta.label;
+  return (
+    <div className="page-head">
+      <div className="page-head-text">
+        {resolvedEyebrow ? <div className="page-eyebrow">{resolvedEyebrow}</div> : null}
+        {resolvedTitle ? <h1 className="page-title">{resolvedTitle}</h1> : null}
+        {sub ? <div className="page-sub">{sub}</div> : null}
+        {children}
+      </div>
+      {actions ? <div className="page-actions">{actions}</div> : null}
     </div>
-    {actions ? <div className="page-actions">{actions}</div> : null}
-  </div>
-);
+  );
+};
 
 export const SectionHeader = ({ title, sub, actions }) => (
   <div className="section-head">
@@ -361,6 +389,86 @@ export const Modal = ({ title, sub, onClose, children, footer, width = 560, icon
   );
 };
 
+/**
+ * The card-shaped modal that fifteen screens each used to define privately.
+ *
+ * Kept deliberately drop-in: same props, same DOM (a .card with a
+ * .card-head, then the caller's own markup unwrapped), so adopting it
+ * changes no padding and no layout. What it adds is the behaviour those
+ * copies were each missing something from:
+ *
+ *   - role="dialog" + aria-modal + a label, so a screen reader announces it
+ *     as a dialog rather than reading it as more page content
+ *   - a body scroll lock, so the page behind stops scrolling under it
+ *   - focus moved into the panel on open and returned on close
+ *   - a height cap with its own scroll — the Staff copy had none, so a long
+ *     form simply ran off the bottom of the viewport with no way to reach
+ *     the submit button
+ *
+ * The inline `background: var(--overlay)` is load-bearing, not decoration:
+ * globals.css keys the phone bottom-sheet treatment off that marker.
+ *
+ * For anything new, prefer <Modal> — it has a proper header, a sticky
+ * footer slot and the same behaviour. This exists so the existing forms can
+ * move over without being rewritten.
+ */
+export const ModalShell = ({ title, sub, onClose, children, width = 520 }) => {
+  useOverlay(onClose);
+  const panelRef = useRef(null);
+
+  useEffect(() => {
+    const previouslyFocused = document.activeElement;
+    // Prefer the first real control; fall back to the panel so the dialog
+    // is at least the focus origin for tabbing.
+    const target = panelRef.current?.querySelector(
+      "input, select, textarea, button:not(.icon-btn), [tabindex]:not([tabindex='-1'])"
+    ) || panelRef.current;
+    target?.focus?.({ preventScroll: true });
+    return () => {
+      if (previouslyFocused instanceof HTMLElement) {
+        previouslyFocused.focus?.({ preventScroll: true });
+      }
+    };
+  }, []);
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, background: "var(--overlay)",
+        display: "grid", placeItems: "center", zIndex: 250, padding: 16,
+        overflowY: "auto",
+      }}
+    >
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label={typeof title === "string" ? title : undefined}
+        onClick={(e) => e.stopPropagation()}
+        className="card"
+        style={{
+          width: "100%", maxWidth: width,
+          maxHeight: "calc(100vh - 32px)", overflowY: "auto",
+          outline: "none",
+        }}
+      >
+        <div className="card-head">
+          <div style={{ minWidth: 0 }}>
+            <div className="card-title">{title}</div>
+            {sub && <div className="card-sub">{sub}</div>}
+          </div>
+          <button className="icon-btn" onClick={onClose} aria-label="Close">
+            <Icon name="x" size={14} />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+};
+
 export const Drawer = ({ title, sub, onClose, children, footer, wide = false, icon }) => {
   useOverlay(onClose);
   return (
@@ -433,6 +541,42 @@ export const Toast = ({ tone = "ok", title, sub, onClose, action }) => (
     )}
   </div>
 );
+
+// Screen-level toast. Accepts both call shapes the screens already use —
+// <ScreenToast msg tone onClose /> and <ScreenToast toast={{msg,tone}} /> —
+// so screens can drop their local copy without touching any call site.
+// Tones: "ok" | "err"/"bad" | anything else reads neutral.
+export const ScreenToast = ({ msg, tone, toast, onClose }) => {
+  const text = msg ?? toast?.msg;
+  const t = tone ?? toast?.tone;
+  if (!text) return null;
+  const kind = t === "ok" ? "ok" : (t === "err" || t === "bad") ? "bad" : t === "warn" ? "warn" : "";
+  return (
+    <div className="toast-stack">
+      <div
+        className={`toast ${kind}`}
+        role="status"
+        onClick={onClose}
+        style={onClose ? { cursor: "pointer" } : undefined}
+      >
+        <span className="toast-ico" aria-hidden="true">
+          <Icon name={kind === "bad" ? "x" : kind === "warn" ? "warning" : kind === "ok" ? "check" : "info"} size={12} stroke={2.4} />
+        </span>
+        <div className="toast-title" style={{ flex: 1 }}>{text}</div>
+        {onClose && (
+          <button
+            className="icon-btn"
+            style={{ width: 22, height: 22 }}
+            onClick={(e) => { e.stopPropagation(); onClose(); }}
+            aria-label="Dismiss"
+          >
+            <Icon name="x" size={11} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
 
 /* --------------------------------------------------------------------------
    Activity timeline — grouped by day, subtle connectors.

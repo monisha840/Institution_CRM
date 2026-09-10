@@ -3,21 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { formatClassLabel } from "@/lib/format";
 import Icon from "../Icon";
-import { KPI, AvatarChip, StatusChip } from "../ui";
+import { KPI, AvatarChip, StatusChip, ScreenToast as Toast, EmptyState, ModalShell, PageHeader } from "../ui";
 import { resolveSchool, downloadPdf } from "@/lib/export";
 
-function Toast({ msg, tone, onClose }) {
-  if (!msg) return null;
-  const bg = tone === "ok" ? "var(--ok)" : tone === "err" ? "var(--err, #b13c1c)" : "var(--ink)";
-  return (
-    <div onClick={onClose} role="status" style={{
-      position: "fixed", bottom: 18, right: 18, zIndex: 9000,
-      background: bg, color: "#fff", padding: "9px 14px", borderRadius: 8,
-      fontSize: 12, fontWeight: 500, cursor: "pointer", maxWidth: 360,
-      boxShadow: "0 12px 30px -16px rgba(0,0,0,0.35)",
-    }}>{msg}</div>
-  );
-}
 
 export default function ScreenTransport({ E, refresh, role, session }) {
   const school = resolveSchool(E?.SETTINGS);
@@ -449,29 +437,9 @@ export default function ScreenTransport({ E, refresh, role, session }) {
 
   return (
     <div className="page">
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">Operations · Transport</div>
-          <div className="page-title">Transport <span className="amber">live boarding</span></div>
-          <div style={{ color: "var(--ink-3)", fontSize: 12, marginTop: 12, display: "flex", gap: 10, flexWrap: "wrap" }}>
-            {(() => {
-              const runningCount = routes.filter((r) => r.status === "running").length;
-              if (runningCount > 0) {
-                return (
-                  <span className="live-pill"><span className="pulse-dot" />Live GPS · {runningCount} bus{runningCount === 1 ? "" : "es"} running</span>
-                );
-              }
-              return (
-                <span className="live-pill" style={{ background: "var(--bg-2)" }}>
-                  <span className="dot" />No buses running · {routes.length} route{routes.length === 1 ? "" : "s"} on file
-                </span>
-              );
-            })()}
-            <span>Morning run · 07:00 – 08:00</span>
-          </div>
-        </div>
-        <div className="page-actions">
-          <button className="btn" onClick={() => setShowMap(true)}>
+      <PageHeader
+        sub={"Live boarding, routes and stops — who is on which bus, and where it has reached."}
+        actions={<><button className="btn" onClick={() => setShowMap(true)}>
             <Icon name="mapPin" size={13} />Map view
           </button>
           <button className="btn" onClick={() => setShowAbsent(true)}>
@@ -486,8 +454,24 @@ export default function ScreenTransport({ E, refresh, role, session }) {
             <button className="btn accent" onClick={() => setShowAdd(true)}>
               <Icon name="plus" size={13} />Add route
             </button>
-          )}
-        </div>
+          )}</>}
+      />
+
+      <div className="page-status">
+        {(() => {
+          const runningCount = routes.filter((r) => r.status === "running").length;
+          if (runningCount > 0) {
+            return (
+              <span className="live-pill"><span className="pulse-dot" />Live GPS · {runningCount} bus{runningCount === 1 ? "" : "es"} running</span>
+            );
+          }
+          return (
+            <span className="live-pill" style={{ background: "var(--bg-2)" }}>
+              <span className="dot" />No buses running · {routes.length} route{routes.length === 1 ? "" : "s"} on file
+            </span>
+          );
+        })()}
+        <span>Morning run · 07:00 – 08:00</span>
       </div>
 
       <div className="grid g-4" style={{ marginBottom: 14 }}>
@@ -703,7 +687,13 @@ export default function ScreenTransport({ E, refresh, role, session }) {
 
         {!route ? (
           <div className="col-8">
-            <div className="card"><div className="empty" style={{ padding: 60 }}>Add a route to see live boarding here.</div></div>
+            <div className="card">
+              <EmptyState
+                icon="bus"
+                title="No route selected"
+                body="Pick a route on the left to watch boarding happen stop by stop, or add your first route to begin."
+              />
+            </div>
           </div>
         ) : (
         <div className="col-8" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -859,9 +849,17 @@ export default function ScreenTransport({ E, refresh, role, session }) {
                                 : amStatus === "parent" ? "AM by parent"
                                 : "AM —";
                               const amOk = amStatus === "boarded" || amStatus === "parent";
+                              // This row sits three containers deep (route
+                              // card → stop grid → roster), so on a phone it
+                              // has ~180px to work with. The status chips and
+                              // buttons can't shrink, so the name column
+                              // absorbed the whole shortfall — 61px wide and
+                              // 85px tall, one word per line. Wrapping puts
+                              // the marks under the child they belong to.
                               return (
                                 <div key={stu.id} style={{
                                   display: "flex", alignItems: "center", gap: 8,
+                                  flexWrap: "wrap", rowGap: 6,
                                   padding: "6px 8px",
                                   background: "var(--bg-2)", border: "1px solid var(--rule-2)",
                                   borderRadius: 7,
@@ -872,7 +870,7 @@ export default function ScreenTransport({ E, refresh, role, session }) {
                                     color: "#fff", display: "grid", placeItems: "center",
                                     fontSize: 9.5, fontWeight: 600, flexShrink: 0,
                                   }}>{(stu.name || "?").split(/\s+/).map((p) => p[0]).slice(0, 2).join("").toUpperCase()}</span>
-                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ flex: 1, minWidth: 130 }}>
                                     <div style={{ fontSize: 12.5, fontWeight: 500 }}>{stu.name}</div>
                                     <div style={{ fontSize: 10.5, color: "var(--ink-4)" }}>{formatClassLabel(stu.cls)} · {stu.id}</div>
                                   </div>
@@ -989,7 +987,13 @@ export default function ScreenTransport({ E, refresh, role, session }) {
                 <thead><tr><th>Student</th><th>Class</th><th>Route · Stop</th><th>Trip</th><th>Pickup</th></tr></thead>
                 <tbody>
                   {absentees.length === 0 && (
-                    <tr><td colSpan={5} className="empty">No absentees logged today.</td></tr>
+                    <tr><td colSpan={5} style={{ padding: 0 }}>
+                      <EmptyState
+                        icon="check"
+                        title="Every child is accounted for"
+                        body="Nobody has been marked absent on the bus today. Absentees appear here the moment a driver marks one."
+                      />
+                    </td></tr>
                   )}
                   {absentees.map((a, i) => (
                     <tr key={`${a.studentId}-${a.direction}-${i}`}>
@@ -1252,30 +1256,6 @@ function DirectionChip({ direction = "both" }) {
   );
 }
 
-function ModalShell({ title, sub, onClose, children, width = 520 }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  return (
-    <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "var(--overlay)",
-      display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
-    }}>
-      <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: width, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
-        <div className="card-head">
-          <div>
-            <div className="card-title">{title}</div>
-            {sub && <div className="card-sub">{sub}</div>}
-          </div>
-          <button className="icon-btn" onClick={onClose}><Icon name="x" size={14} /></button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 function Field({ label, children, hint }) {
   return (
@@ -2031,7 +2011,11 @@ function AddStudentToStopModal({ route, stop, students, onClose, onPick }) {
           placeholder="Search by name, class, or ID…"
         />
         {candidates.length === 0 ? (
-          <div className="empty">No students match. Either every student is already on this stop, or there's no roster yet.</div>
+          <EmptyState
+            icon="students"
+            title="No students left to add"
+            body="Every student is already assigned to this stop, or the roster is empty. Admit students first, then assign them here."
+          />
         ) : (
           <div style={{ maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
             {candidates.map((s) => {
@@ -2114,7 +2098,11 @@ function RouteRosterModal({ route, studentsByStop, onClose, onAdd, onRemove }) {
     >
       <div className="card-body" style={{ display: "flex", flexDirection: "column", gap: 12, maxHeight: "70vh", overflowY: "auto" }}>
         {stops.length === 0 && (
-          <div className="empty">This route has no stops yet — add some via Edit route first.</div>
+          <EmptyState
+            icon="mapPin"
+            title="This route has no stops"
+            body="Stops define where the bus picks up and drops off. Add them with Edit route, then assign students to each one."
+          />
         )}
         {stops.map((s) => {
           const assigned = studentsByStop[s.name] || [];
@@ -2286,7 +2274,11 @@ function AbsenteeModal({ absentees, onClose, onDownload }) {
     <ModalShell title="Absentees · today" sub={`${absentees.length} student${absentees.length === 1 ? "" : "s"} absent · auto-SMS sent on detection`} onClose={onClose} width={680}>
       <div className="card-body" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {absentees.length === 0 ? (
-          <div className="empty">No absentees marked yet today. As drivers tap “Mark absent” on the stops page, they appear here.</div>
+          <EmptyState
+            icon="check"
+            title="No absentees today"
+            body="As drivers mark children absent on the stops page, they appear here so the office can call home."
+          />
         ) : (
           <table className="table">
             <thead><tr><th>Student</th><th>Class</th><th>Route · Stop</th><th>Trip</th></tr></thead>
@@ -2333,7 +2325,11 @@ function MapModal({ routes, onClose }) {
     <ModalShell title="Map view" sub="Live route lanes — each line is one bus" onClose={onClose} width={760}>
       <div className="card-body">
         {routes.length === 0 ? (
-          <div className="empty">No routes to display. Add one first.</div>
+          <EmptyState
+            icon="bus"
+            title="No routes yet"
+            body="A route is a bus, a driver and an ordered list of stops. Add one to start tracking boarding."
+          />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             {routes.map((r, ri) => {
@@ -2517,7 +2513,13 @@ function MaintenanceModal({ route, canEdit, allLogs, onClose, onChanged }) {
             </thead>
             <tbody>
               {logs.length === 0 && (
-                <tr><td colSpan={7} className="empty">No maintenance logged for this bus yet.</td></tr>
+                <tr><td colSpan={7} style={{ padding: 0 }}>
+                  <EmptyState
+                    icon="wrench"
+                    title="No maintenance logged"
+                    body="Record services, repairs and fitness renewals here so the next due date is never a surprise."
+                  />
+                </td></tr>
               )}
               {logs.map((l) => {
                 const overdue = l.nextDueDate && new Date(l.nextDueDate) < new Date(new Date().toISOString().slice(0,10));
@@ -2899,7 +2901,13 @@ function TransportHistoryView({ rows, students, routes, isParent, school, actor 
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={isParent ? 6 : 7} className="empty">No transport attendance records in this window.</td></tr>
+                <tr><td colSpan={isParent ? 6 : 7} style={{ padding: 0 }}>
+                <EmptyState
+                  icon="calendar"
+                  title="No records in this date range"
+                  body="Widen the dates, or pick a route that was running during this period."
+                />
+              </td></tr>
               )}
               {filtered.map((r, i) => (
                 <tr key={`${r.studentId}-${r.date}-${r.direction}-${i}`}>

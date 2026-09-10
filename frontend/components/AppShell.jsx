@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import Icon from "./Icon";
-import Sidebar, { NAV_BY_ROLE, getAllowedNavIds } from "./Sidebar";
-import { setInstitutionType, institutionTypeFromSettings, setInstitutionName, vocab } from "@/lib/institution";
+import Sidebar, { NAV_BY_ROLE, getAllowedNavIds, navMetaFor } from "./Sidebar";
+import { ScreenContext } from "./ui";
+import { setInstitutionType, setInstitutionName, vocab } from "@/lib/institution";
 import MobileShell from "./MobileShell";
 import Tweaks from "./Tweaks";
 import GlobalSearch from "./GlobalSearch";
@@ -35,6 +36,7 @@ import ScreenAudit from "./screens/Audit";
 import ScreenSettings from "./screens/Settings";
 import ScreenClasses from "./screens/Classes";
 import ScreenAttendance from "./screens/Attendance";
+import ScreenEligibility from "./screens/Eligibility";
 import ScreenAccessControl from "./screens/AccessControl";
 import ScreenTasks from "./screens/Tasks";
 import ScreenReports from "./screens/Reports";
@@ -80,6 +82,7 @@ const SCREENS = {
   settings: ScreenSettings,
   classes: ScreenClasses,
   attendance: ScreenAttendance,
+  eligibility: ScreenEligibility,
   access: ScreenAccessControl,
   tasks: ScreenTasks,
   reports: ScreenReports,
@@ -138,40 +141,19 @@ const DEFAULT_SETTINGS = {
 
 export default function AppShell({ initialData, session }) {
   const [data, setData] = useState(initialData);
-  // Applied during render, not in an effect, so every label rendered below on
-  // this same pass already reads the right vocabulary. An effect would leave
-  // the first paint showing school wording on a college deployment.
-  const institution = institutionTypeFromSettings(data?.SETTINGS);
-  setInstitutionType(institution);
-  setInstitutionName(data?.SETTINGS?.school?.name);
 
-  // Flip school <-> college. The mode is applied optimistically so a live demo
-  // switches the instant it is clicked, then persisted; if the save fails the
-  // optimistic flip is rolled back rather than leaving the UI asserting a
-  // change the database never took.
-  async function changeInstitution(next) {
-    const previous = institution;
-    if (next === previous) return;
-    const applyMode = (mode) => setData((d) => ({
-      ...d,
-      SETTINGS: {
-        ...(d?.SETTINGS || {}),
-        school: { ...((d?.SETTINGS || {}).school || {}), institutionType: mode },
-      },
-    }));
-    applyMode(next);
-    try {
-      const r = await fetch("/api/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ settings: { school: { institutionType: next } } }),
-      });
-      const j = await r.json();
-      if (!j?.ok) throw new Error(j?.error || "Save failed");
-    } catch {
-      applyMode(previous);
-    }
-  }
+  // The institution is a property of the signed-in tenant, not a setting.
+  // Whoever signed in chose their institution at the login screen, and the
+  // session JWT carries it; a school session can only ever see school data,
+  // so there is nothing here to toggle.
+  //
+  // Applied during render rather than in an effect, so every label on this
+  // same pass already reads the right vocabulary — an effect would leave the
+  // first paint showing school wording to a college user.
+  const institution = session?.institution?.type === "college" ? "college" : "school";
+  setInstitutionType(institution);
+  setInstitutionName(session?.institution?.name);
+
   const V = vocab();
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [current, setCurrent] = useState(DEFAULT_SCREEN_BY_ROLE[session?.role] || "dashboard");
@@ -428,7 +410,7 @@ export default function AppShell({ initialData, session }) {
   // Per-role data scoping. Defence-in-depth: API/RLS should enforce too.
   const scopedData = (() => {
     if (role === "parent") {
-      // Parent sees ONLY their child. Demo picks the first active student
+      // Parent sees ONLY their child. Falls back to the first active student
       // when no linked_id is set; production should always have a linked_id.
       const linkedId = session?.linkedId;
       const myChild = linkedId
@@ -635,6 +617,13 @@ export default function AppShell({ initialData, session }) {
   // mobile tab bar so neither can offer a destination the sidebar hides.
   const allowedIds = getAllowedNavIds(role, permissions, permExplicit).filter((id) => SCREENS[id]);
 
+  // The current screen's place in the nav — its section heading and the
+  // label on its item. Published so PageHeader can default the eyebrow and
+  // the title, which keeps a page's heading in step with the thing you
+  // clicked to reach it, and keeps the college's relabelling (Faculty,
+  // Semesters, Migration certificates) flowing through to page headers.
+  const screenMeta = navMetaFor(role, current, permissions, permExplicit);
+
   // Navigate to a screen and ask it to open its own create flow. Screens
   // that understand `{ action: "create" }` pop their existing Add modal;
   // the rest simply land on the screen. No new create logic is introduced.
@@ -746,7 +735,9 @@ export default function AppShell({ initialData, session }) {
         style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: "32px 16px", background: "var(--bg-2)" }}
       >
         <MobileShell current={current} setCurrent={setCurrent} role={role}>
+          <ScreenContext.Provider value={screenMeta}>
           <Comp E={E} refresh={refresh} role={role} session={session} setCurrent={setCurrent} searchFocus={searchFocus} clearSearchFocus={clearSearchFocus} onOpenItem={(item) => { if (item?.screen) setCurrent(item.screen); setSearchFocus(item); }} />
+        </ScreenContext.Provider>
         </MobileShell>
         <ViewToggle view={view} setView={(v) => setSetting("view", v)} />
         <Tweaks show={showTweaks} settings={settings} setSetting={setSetting} />
@@ -824,9 +815,6 @@ export default function AppShell({ initialData, session }) {
             }
           />
           <div className="topbar-right">
-            {role === "admin" && (
-              <InstitutionToggle value={institution} onChange={changeInstitution} />
-            )}
             {quickCreateItems.length > 0 && (
               <QuickCreateMenu items={quickCreateItems} />
             )}
@@ -835,7 +823,9 @@ export default function AppShell({ initialData, session }) {
           </div>
         </div>
 
-        <Comp E={E} refresh={refresh} role={role} session={session} setCurrent={setCurrent} searchFocus={searchFocus} clearSearchFocus={clearSearchFocus} onOpenItem={(item) => { if (item?.screen) setCurrent(item.screen); setSearchFocus(item); }} />
+        <ScreenContext.Provider value={screenMeta}>
+          <Comp E={E} refresh={refresh} role={role} session={session} setCurrent={setCurrent} searchFocus={searchFocus} clearSearchFocus={clearSearchFocus} onOpenItem={(item) => { if (item?.screen) setCurrent(item.screen); setSearchFocus(item); }} />
+        </ScreenContext.Provider>
 
         <BrandFooter />
       </div>
@@ -966,38 +956,6 @@ function MobileTabBar({ current, setCurrent, allowedIds, onMore }) {
         <span>More</span>
       </button>
     </nav>
-  );
-}
-
-// Institution mode switch, shown in the top bar so school and college can be
-// demonstrated side by side without navigating into Settings. Admin only,
-// mirroring /api/settings, which rejects this write for every other role.
-function InstitutionToggle({ value, onChange }) {
-  const [busy, setBusy] = useState(false);
-  const flip = async (next) => {
-    if (busy || next === value) return;
-    setBusy(true);
-    try { await onChange(next); } finally { setBusy(false); }
-  };
-  return (
-    <div
-      className="segmented institution-toggle"
-      style={{ marginRight: 4, opacity: busy ? 0.6 : 1 }}
-      title="Switch between school and college presentation"
-    >
-      {[["school", "School"], ["college", "College"]].map(([key, label]) => (
-        <button
-          key={key}
-          type="button"
-          className={value === key ? "active" : ""}
-          disabled={busy}
-          onClick={() => flip(key)}
-          style={{ fontSize: 11.5, padding: "0 11px", whiteSpace: "nowrap" }}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
   );
 }
 

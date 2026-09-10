@@ -7,7 +7,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Icon from "../Icon";
-import { KPI } from "../ui";
+import { KPI, PageHeader } from "../ui";
 import { formatClassLabel } from "@/lib/format";
 
 const PRE_CHECKLIST = [
@@ -208,21 +208,12 @@ export default function ScreenScale({ E, role, session, refresh }) {
         }}>{toast.msg}</div>
       )}
 
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">Academics · SCALE</div>
-          <div className="page-title">SCALE <span className="amber">session</span></div>
-          <div className="page-sub">
-            Per-lesson record. Targets a 2-minute fill — every rating defaults to <strong>3 (on track)</strong>,
-            tap only the outliers. Score the students whose performance today moved up or down.
-          </div>
-        </div>
-        <div className="page-actions">
-          <button className="btn accent" onClick={submit} disabled={busy}>
+      <PageHeader
+        sub={<>Per-lesson record. Targets a 2-minute fill — every rating defaults to <strong>3 (on track)</strong>, tap only the outliers. Score the students whose performance today moved up or down.</>}
+        actions={<><button className="btn accent" onClick={submit} disabled={busy}>
             <Icon name="check" size={13} />{busy ? "Saving…" : "Save session"}
-          </button>
-        </div>
-      </div>
+          </button></>}
+      />
 
       <div className="grid g-4" style={{ marginBottom: 14 }}>
         <KPI label="Today's roster" value={roster.length} sub={identity.cls ? formatClassLabel(identity.cls) : "no class picked"} puck="cream" puckIcon="students" />

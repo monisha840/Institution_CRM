@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { getSession } from "@/lib/auth";
-import { ensureDemoUsers, DEMO_ACCOUNTS } from "@/lib/seed-users";
+import { TENANT_HINT_COOKIE } from "@/lib/tenant-context";
+import { normalizeTenant, tenantOptions, TENANTS } from "@/lib/tenants";
 import LoginScreen from "./LoginScreen";
 
 export const dynamic = "force-dynamic";
@@ -13,22 +15,27 @@ export default async function LoginPage({ searchParams }) {
     redirect(next.startsWith("/") ? next : "/");
   }
 
-  // First-run convenience: seed the canonical demo users idempotently.
-  // Production-gated — once deployed to a real school we don't want
-  // `admin@school.com / admin123` etc. to keep being re-created on every
-  // page load. Real users get added via the Users & Roles screen.
-  if (process.env.NODE_ENV !== "production") {
-    try { await ensureDemoUsers(); } catch (e) {
-      console.warn("[login] seed failed:", e?.message);
-    }
-  }
+  // Which institution the screen opens on: an explicit ?tenant= wins (so a
+  // link can point straight at one), then the hint cookie left by the last
+  // sign-in, then the default.
+  //
+  // No accounts are seeded here. Users are created by scripts/seed-tenants.js
+  // and by the app itself when a staff member or student is added — a page
+  // load has no business writing credentials into the database.
+  const active = normalizeTenant(
+    searchParams?.tenant || cookies().get(TENANT_HINT_COOKIE)?.value
+  );
 
-  // The login screen no longer renders the password hint card, but we
-  // still pass the demo list so dev's role-tile picker can pre-fill the
-  // form. In production this list is unused by the UI.
-  const demo = process.env.NODE_ENV !== "production"
-    ? DEMO_ACCOUNTS.map((a) => ({ email: a.email, password: a.password, role: a.role, name: a.name }))
-    : [];
+  // Only public branding crosses to the client. Nothing here is a secret:
+  // it is the name, city and strapline a visitor would read off the gate.
+  const institutions = tenantOptions().map((o) => ({
+    ...o,
+    headline: TENANTS[o.id].loginHeadline,
+    blurb: TENANTS[o.id].loginBlurb,
+    affiliation: TENANTS[o.id].affiliation,
+    emailDomain: TENANTS[o.id].emailDomain,
+  }));
+
   const next = typeof searchParams?.next === "string" ? searchParams.next : "/";
-  return <LoginScreen demo={demo} next={next} />;
+  return <LoginScreen institutions={institutions} initialTenant={active} next={next} />;
 }

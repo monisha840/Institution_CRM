@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../Icon";
+import { EmptyState, PageHeader } from "../ui";
 import { formatClassLabel } from "@/lib/format";
 
 export default function ScreenChat({ E, refresh, role, session }) {
@@ -77,20 +78,16 @@ export default function ScreenChat({ E, refresh, role, session }) {
 
   return (
     <div className="page">
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">{role === "parent" ? "Parents · Talk to teacher" : "Teacher · Parent inbox"}</div>
-          <div className="page-title">Parent–Teacher <span className="amber">chat</span></div>
-          <div className="page-sub">{threads.length} conversation{threads.length === 1 ? "" : "s"}</div>
-        </div>
-        {role === "parent" && (
-          <div className="page-actions">
+      <PageHeader
+        sub={<>{threads.length} conversation{threads.length === 1 ? "" : "s"}</>}
+        actions={<>{role === "parent" && (
+          <>
             <button className="btn accent" onClick={() => setShowStart(true)}>
               <Icon name="plus" size={13} />New conversation
             </button>
-          </div>
-        )}
-      </div>
+          </>
+        )}</>}
+      />
 
       <div className="card" style={{ height: 600, display: "flex", overflow: "hidden" }}>
         {/* Threads list */}
@@ -101,9 +98,13 @@ export default function ScreenChat({ E, refresh, role, session }) {
           </div>
           <div style={{ flex: 1, overflowY: "auto" }}>
             {threads.length === 0 && (
-              <div className="empty" style={{ padding: 20, fontSize: 12 }}>
-                {role === "parent" ? "No conversations yet. Click New conversation." : "No parent has reached out yet."}
-              </div>
+              <EmptyState
+                icon="send"
+                title={role === "parent" ? "No conversations yet" : "No parent has written in"}
+                body={role === "parent"
+                  ? "Message your child's teacher directly — replies land here and you are notified."
+                  : "When a parent starts a conversation it appears here, newest first."}
+              />
             )}
             {threads.map((t) => {
               const last = t.messages?.[t.messages.length - 1];
@@ -177,8 +178,14 @@ export default function ScreenChat({ E, refresh, role, session }) {
         {/* Active thread */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
           {!thread ? (
-            <div className="empty" style={{ flex: 1, display: "grid", placeItems: "center" }}>
-              {threads.length === 0 ? "Start your first conversation" : "Pick a conversation on the left"}
+            <div style={{ flex: 1, display: "grid", placeItems: "center" }}>
+              <EmptyState
+                icon="send"
+                title={threads.length === 0 ? "No conversation open" : "Pick a conversation"}
+                body={threads.length === 0
+                  ? "Start a conversation and the full thread appears here."
+                  : "Choose a thread on the left to read it and reply."}
+              />
             </div>
           ) : (
             <>
@@ -192,7 +199,13 @@ export default function ScreenChat({ E, refresh, role, session }) {
               </div>
               <div style={{ flex: 1, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 10, background: "var(--bg-2)" }}>
                 {(thread.messages || []).length === 0 && (
-                  <div className="empty" style={{ alignSelf: "center" }}>No messages yet — say hi.</div>
+                  <div style={{ alignSelf: "center" }}>
+                    <EmptyState
+                      icon="send"
+                      title="No messages yet"
+                      body="Say hello — the other side is notified as soon as you send."
+                    />
+                  </div>
                 )}
                 {(thread.messages || []).map((m) => {
                   const mine = (m.fromEmail || "").toLowerCase() === (session?.email || "").toLowerCase();

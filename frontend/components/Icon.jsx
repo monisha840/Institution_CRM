@@ -85,9 +85,20 @@ const PATHS = {
   arrowUpRight: <><path d="M7 17L17 7M9 7h8v8"/></>,
   minus: <><path d="M5 12h14"/></>,
   info: <><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></>,
+  lock: <><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M12 14v3"/></>,
+  // Transport runs a morning and an evening trip; these two were already
+  // being asked for by name and silently rendered as an empty box.
+  sunrise: <><path d="M12 3v5M5.6 10.6 7 12M18.4 10.6 17 12M2 18h20M4 22h16"/><path d="M8 18a4 4 0 0 1 8 0"/></>,
+  sunset: <><path d="M12 9V4M5.6 10.6 7 12M18.4 10.6 17 12M2 18h20M4 22h16"/><path d="M8 18a4 4 0 0 1 8 0"/></>,
+  image: <><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="m4 17 5-5 4 4 3-2 4 4"/></>,
 };
 
 export default function Icon({ name, size = 16, stroke = 1.5, className = "", style }) {
+  // An unknown name renders an empty <svg> — a silent, invisible hole that
+  // is easy to ship and hard to spot. Say so in development.
+  if (process.env.NODE_ENV !== "production" && name && !PATHS[name]) {
+    console.warn(`[Icon] no glyph named "${name}" — rendering an empty box.`);
+  }
   return (
     <svg
       width={size}

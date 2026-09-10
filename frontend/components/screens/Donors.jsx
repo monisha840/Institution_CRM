@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../Icon";
-import { KPI, AvatarChip } from "../ui";
+import { KPI, AvatarChip, ScreenToast as Toast, EmptyState, ModalShell, PageHeader } from "../ui";
 import { money, moneyK } from "@/lib/format";
 import { resolveSchool, downloadPdf } from "@/lib/export";
 
@@ -29,43 +29,7 @@ export function parseNextTouchpoint(raw) {
   return { iso, note, label: note ? `${nice} · ${note}` : nice };
 }
 
-function Toast({ msg, tone, onClose }) {
-  if (!msg) return null;
-  const bg = tone === "ok" ? "var(--ok)" : tone === "err" ? "var(--err, #b13c1c)" : "var(--ink)";
-  return (
-    <div onClick={onClose} role="status" style={{
-      position: "fixed", bottom: 18, right: 18, zIndex: 9000,
-      background: bg, color: "#fff", padding: "9px 14px", borderRadius: 8,
-      fontSize: 12, fontWeight: 500, cursor: "pointer", maxWidth: 360,
-      boxShadow: "0 12px 30px -16px rgba(0,0,0,0.35)",
-    }}>{msg}</div>
-  );
-}
 
-function ModalShell({ title, sub, onClose, children, width = 520 }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  return (
-    <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "var(--overlay)",
-      display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
-    }}>
-      <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: width, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
-        <div className="card-head">
-          <div>
-            <div className="card-title">{title}</div>
-            {sub && <div className="card-sub">{sub}</div>}
-          </div>
-          <button className="icon-btn" onClick={onClose}><Icon name="x" size={14} /></button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 function Field({ label, children, hint }) {
   return (
@@ -268,22 +232,18 @@ export default function ScreenDonors({ E, refresh, role, session }) {
 
   return (
     <div className="page">
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">CRM · Trust & Donors</div>
-          <div className="page-title">Trust & <span className="amber">Donors</span></div>
-          <div className="page-sub">Donor CRM · campaigns · 80G receipts · annual statements</div>
-        </div>
-        {canEdit && (
-          <div className="page-actions">
+      <PageHeader
+        sub={"Donor CRM · campaigns · 80G receipts · annual statements"}
+        actions={<>{canEdit && (
+          <>
             <button className="btn" onClick={() => setViewingReceiptsFor("*")} disabled={receipts.length === 0} title={receipts.length === 0 ? "No receipts yet" : `Browse ${receipts.length} receipts`}>
               <Icon name="download" size={13} />Receipts ({receipts.length})
             </button>
             <button className="btn" onClick={() => setShowCampaign(true)}><Icon name="send" size={13} />Campaign</button>
             <button className="btn accent" onClick={() => setShowAdd(true)}><Icon name="plus" size={13} />Add donor</button>
-          </div>
-        )}
-      </div>
+          </>
+        )}</>}
+      />
 
       {/* Public-form submissions waiting for review. Admin / principal
           accepts → inserts a real donor row + flips status to accepted.
@@ -559,7 +519,11 @@ export default function ScreenDonors({ E, refresh, role, session }) {
               )}
             </div>
             {campaigns.length === 0 ? (
-              <div className="empty">No campaigns yet. Create one to set fundraising targets.</div>
+              <EmptyState
+                icon="target"
+                title="No campaigns yet"
+                body="A campaign gives a fundraising drive a goal and a deadline, so progress can be tracked against it."
+              />
             ) : (
               <div style={{ padding: "8px 14px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
                 {campaigns.map((c) => {
@@ -598,7 +562,11 @@ export default function ScreenDonors({ E, refresh, role, session }) {
           <div className="card">
             <div className="card-head"><div><div className="card-title">Top contributors · YTD</div></div></div>
             {donors.length === 0 ? (
-              <div className="empty">Add donors to see contribution rankings.</div>
+              <EmptyState
+                icon="donors"
+                title="No contributions to rank"
+                body="Once donations are recorded, this year's largest contributors appear here."
+              />
             ) : (
               <div>
                 {[...donors].sort((a, b) => (b.ytd || 0) - (a.ytd || 0)).slice(0, 5).map((d, i) => (
@@ -950,7 +918,7 @@ function ReceiptModal({ receipt, onClose }) {
         <img src="${window.location.origin}/logo.png" alt="logo" style="width:56px;height:56px;object-fit:contain;flex-shrink:0;" />
         <div style="flex:1;text-align:left;">
           <div class="title">Donation receipt</div>
-          <div class="sub">Sirah Demo School &middot; Sirah Education Trust</div>
+          <div class="sub">${[school?.name, school?.trustName].filter(Boolean).join(" &middot; ")}</div>
         </div>
       </div>
       <div class="row"><span class="lbl">Receipt #</span><span><b>${receipt.id}</b></span></div>
@@ -1013,7 +981,11 @@ function ReceiptsListModal({ scope, receipts = [], onClose, onPreview, onExport 
     <ModalShell title={title} sub={sub} onClose={onClose} width={620}>
       <div className="card-body" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {receipts.length === 0 ? (
-          <div className="empty">No receipts yet. Record a donation to generate one.</div>
+          <EmptyState
+            icon="reports"
+            title="No receipts issued"
+            body="Recording a donation generates its 80G receipt automatically, ready to download or email."
+          />
         ) : (
           <div style={{ maxHeight: 380, overflowY: "auto", border: "1px solid var(--rule)", borderRadius: 8 }}>
             <table className="table" style={{ width: "100%" }}>

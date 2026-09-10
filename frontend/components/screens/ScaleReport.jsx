@@ -12,6 +12,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Icon from "../Icon";
+import { PageHeader } from "../ui";
 import { resolveSchool, downloadScaleReportPdf } from "@/lib/export";
 import { formatClassLabel } from "@/lib/format";
 
@@ -256,24 +257,14 @@ export default function ScreenScaleReport({ E, role, session, searchFocus, clear
 
   return (
     <div className="page">
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">Academics · SCALE</div>
-          <div className="page-title">SCALE <span className="amber">report</span></div>
-          <div className="page-sub">
-            {isParent
-              ? "Your child's competency profile across the four SCALE domains. Discuss this with the class teacher at the next parent meeting."
-              : "Per-student competency profile. Pick a student to view, change term to scope the date range, then export the PDF for parent meetings."}
-          </div>
-        </div>
-        <div className="page-actions">
-          {(role === "parent" || profile) && (
+      <PageHeader
+        sub={isParent ? "Your child's competency profile across the four SCALE domains. Discuss this with the class teacher at the next parent meeting." : "Per-student competency profile. Pick a student to view, change term to scope the date range, then export the PDF for parent meetings."}
+        actions={<>{(role === "parent" || profile) && (
             <button className="btn accent" onClick={exportPdf} disabled={!profile}>
               <Icon name="download" size={13} />Print / save as PDF
             </button>
-          )}
-        </div>
-      </div>
+          )}</>}
+      />
 
       {/* Picker row — class first, then student. Parent role skips it
           entirely since they only ever see their own child. */}

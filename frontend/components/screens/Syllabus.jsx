@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import Icon from "../Icon";
-import { KPI } from "../ui";
+import { KPI, ScreenToast as Toast, EmptyState, ModalShell, PageHeader } from "../ui";
 import { formatClassLabel } from "@/lib/format";
 
 // Same alias-to-canonical-field map as the Library importer — covers the
@@ -37,43 +37,7 @@ function inferColumnMap(headers) {
 }
 
 // ---------- toast & modal shell (same pattern used elsewhere in the app) ----
-function Toast({ msg, tone, onClose }) {
-  if (!msg) return null;
-  const bg = tone === "ok" ? "var(--ok)" : tone === "err" ? "var(--err, #b13c1c)" : "var(--ink)";
-  return (
-    <div onClick={onClose} role="status" style={{
-      position: "fixed", bottom: 18, right: 18, zIndex: 9000,
-      background: bg, color: "#fff", padding: "9px 14px", borderRadius: 8,
-      fontSize: 12, fontWeight: 500, cursor: "pointer", maxWidth: 360,
-      boxShadow: "0 12px 30px -16px rgba(0,0,0,0.35)",
-    }}>{msg}</div>
-  );
-}
 
-function ModalShell({ title, sub, onClose, children, width = 520 }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  return (
-    <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "var(--overlay)",
-      display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
-    }}>
-      <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: width, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
-        <div className="card-head">
-          <div>
-            <div className="card-title">{title}</div>
-            {sub && <div className="card-sub">{sub}</div>}
-          </div>
-          <button className="icon-btn" onClick={onClose}><Icon name="x" size={14} /></button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 function Field({ label, hint, children }) {
   return (
@@ -287,20 +251,10 @@ export default function ScreenSyllabus({ E, refresh, role, session }) {
     <div className="page">
       <Toast msg={toast?.msg} tone={toast?.tone} onClose={() => setToast(null)} />
 
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">Academics · Syllabus</div>
-          <div className="page-title">
-            Class <span className="amber">syllabus</span>
-          </div>
-          <div className="page-sub">
-            {isParent  ? "Topics planned for your child's class this year." :
-             isTeacher ? "Topics planned for the classes you teach." :
-                         "Per-class topic plan · subject · chapter · term · week"}
-          </div>
-        </div>
-        {canManage && (
-          <div className="page-actions">
+      <PageHeader
+        sub={isParent ? "Topics planned for your child's class this year." : isTeacher ? "Topics planned for the classes you teach." : "Per-class topic plan · subject · chapter · term · week"}
+        actions={<>{canManage && (
+          <>
             <button className="btn" onClick={() => setShowImport(true)} title="Bulk-import topics from an Excel/CSV file">
               <Icon name="upload" size={13} />Import Excel
             </button>
@@ -327,9 +281,9 @@ export default function ScreenSyllabus({ E, refresh, role, session }) {
             <button className="btn accent" onClick={() => setShowAdd(true)}>
               <Icon name="plus" size={13} />Add topic
             </button>
-          </div>
-        )}
-      </div>
+          </>
+        )}</>}
+      />
 
       {/* KPI strip */}
       <div className="grid g-4" style={{ marginBottom: 14 }}>
@@ -573,10 +527,14 @@ function SyllabusTable({ cls, rows, canManage, onRemove }) {
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={canManage ? 7 : 6} className="empty">
-                {rows.length === 0
-                  ? `No syllabus rows for ${cls} yet. Click “Import Excel” or “Add topic” to seed it.`
-                  : "No rows match the current filter."}
+              <tr><td colSpan={canManage ? 7 : 6} style={{ padding: 0 }}>
+                <EmptyState
+                  icon="academic"
+                  title={rows.length === 0 ? `No syllabus for ${cls} yet` : "No rows match this filter"}
+                  body={rows.length === 0
+                    ? "Seed the plan by importing a spreadsheet or adding topics one by one; teachers then tick off coverage as they teach."
+                    : "Try a different subject or completion status."}
+                />
               </td></tr>
             )}
             {filtered.map((r) => (
@@ -1126,7 +1084,7 @@ function ImportSyllabusModal({ onClose, onSubmit, rosterClasses = [], subjectSug
               </div>
             </div>
             <div style={{ maxHeight: 260, overflow: "auto", border: "1px solid var(--rule)", borderRadius: 7 }}>
-              <table className="table" style={{ fontSize: 11.5 }}>
+              <table className="table idx" style={{ fontSize: 11.5 }}>
                 <thead>
                   <tr>
                     <th>#</th><th>Class</th><th>Subject</th><th>Topic</th>

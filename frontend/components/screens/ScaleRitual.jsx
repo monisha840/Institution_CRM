@@ -8,6 +8,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Icon from "../Icon";
+import { PageHeader } from "../ui";
 import { formatClassLabel } from "@/lib/format";
 
 const QUESTIONS = [
@@ -142,17 +143,12 @@ export default function ScreenScaleRitual({ E, role, session, refresh }) {
         }}>{toast.msg}</div>
       )}
 
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">SCALE · Daily ritual</div>
-          <div className="page-title">{isParent ? <>Today's <span className="amber">3 questions</span></> : <>Daily <span className="amber">ritual</span></>}</div>
-          <div className="page-sub">
-            {isParent
-              ? `Two minutes at the end of the day with ${student?.name?.split(" ")[0] || "your child"}. Answer together. It's a closing ritual, not homework.`
-              : "2-minute closing ritual. Three short questions answered each day. Saved per student per date."}
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        title={isParent ? "Today's 3 questions" : "Daily ritual"}
+        sub={isParent
+          ? `Two minutes at the end of the day with ${student?.name?.split(" ")[0] || "your child"}. Answer together. It's a closing ritual, not homework.`
+          : "2-minute closing ritual. Three short questions answered each day. Saved per student per date."}
+      />
 
       {/* Student picker — class first, then student. Hidden for parents. */}
       {!isParent && roster.length > 1 && (

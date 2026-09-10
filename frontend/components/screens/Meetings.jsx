@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Icon from "../Icon";
-import { KPI, EmptyState } from "../ui";
+import { KPI, EmptyState, PageHeader } from "../ui";
 
 export default function ScreenMeetings({ E, refresh, role, session, searchFocus, clearSearchFocus }) {
   const canCreate = ["admin", "principal", "academic_director", "teacher"].includes(role);
@@ -88,20 +88,16 @@ export default function ScreenMeetings({ E, refresh, role, session, searchFocus,
 
   return (
     <div className="page">
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">Operations · Meetings</div>
-          <div className="page-title">Meetings & <span className="amber">PTAs</span></div>
-          <div className="page-sub">Schedule, broadcast, RSVP — class meetings, PTAs, 1:1s</div>
-        </div>
-        {canCreate && (
-          <div className="page-actions">
+      <PageHeader
+        sub={"Schedule, broadcast, RSVP — class meetings, PTAs, 1:1s"}
+        actions={<>{canCreate && (
+          <>
             <button className="btn accent" onClick={() => setShowAdd(true)}>
               <Icon name="plus" size={13} />Schedule meeting
             </button>
-          </div>
-        )}
-      </div>
+          </>
+        )}</>}
+      />
 
       <div className="grid g-4" style={{ marginBottom: 14 }}>
         {(() => {

@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../Icon";
-import { KPI } from "../ui";
-import { formatClassLabel, classNameFromNumber } from "@/lib/format";
+import { KPI, ScreenToast as Toast, EmptyState, ModalShell, PageHeader } from "../ui";
+import { formatClassLabel, classNameFromNumber, guardianPhone } from "@/lib/format";
 
 // Channels the compose form offers. In-app delivers via the parent's
 // dashboard (no external dependency). WhatsApp actually fires the message
@@ -15,56 +15,8 @@ const CHANNELS = [
 ];
 const DEFAULT_CHANNEL = "in_app";
 
-// Pull a 10-digit Indian phone out of student.parent (which is a free-form
-// string like "Mr Suresh · 9876543210"). Returns null if no valid number.
-function parentPhoneOf(student) {
-  if (!student) return null;
-  const digits = String(student.parent || "").replace(/\D/g, "");
-  if (!digits) return null;
-  // Last 10 digits — handles entries that include the country code or a
-  // leading 0. The server-side normaliser re-prefixes 91.
-  const ten = digits.slice(-10);
-  if (ten.length !== 10 || !/^[6-9]/.test(ten)) return null;
-  return ten;
-}
 
-function Toast({ msg, tone, onClose }) {
-  if (!msg) return null;
-  const bg = tone === "ok" ? "var(--ok)" : tone === "err" ? "var(--err, #b13c1c)" : "var(--ink)";
-  return (
-    <div onClick={onClose} role="status" style={{
-      position: "fixed", bottom: 18, right: 18, zIndex: 9000,
-      background: bg, color: "#fff", padding: "9px 14px", borderRadius: 8,
-      fontSize: 12, fontWeight: 500, cursor: "pointer", maxWidth: 360,
-      boxShadow: "0 12px 30px -16px rgba(0,0,0,0.35)",
-    }}>{msg}</div>
-  );
-}
 
-function ModalShell({ title, sub, onClose, children, width = 520 }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  return (
-    <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "var(--overlay)",
-      display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
-    }}>
-      <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: width, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
-        <div className="card-head">
-          <div>
-            <div className="card-title">{title}</div>
-            {sub && <div className="card-sub">{sub}</div>}
-          </div>
-          <button className="icon-btn" onClick={onClose}><Icon name="x" size={14} /></button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 function Field({ label, children, hint }) {
   return (
@@ -205,23 +157,19 @@ export default function ScreenCommunication({ E, refresh, role, session, searchF
 
   return (
     <div className="page">
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">Operations · Communication</div>
-          <div className="page-title">Talk to <span className="amber">parents</span></div>
-          <div className="page-sub">In-app messages · templates · logs</div>
-        </div>
-        {canSend && (
-          <div className="page-actions">
+      <PageHeader
+        sub={"In-app messages · templates · logs"}
+        actions={<>{canSend && (
+          <>
             <button className="btn" onClick={() => setShowImport(true)}>
               <Icon name="upload" size={13} />Import list
             </button>
             <button className="btn accent" onClick={() => { setBroadcastPrefill(null); setShowBroadcast(true); }}>
               <Icon name="send" size={13} />New broadcast
             </button>
-          </div>
-        )}
-      </div>
+          </>
+        )}</>}
+      />
 
       <div className="grid g-4" style={{ marginBottom: 14 }}>
         <KPI label="Messages · today" value={todayCount} sub="In-app messages" puck="mint" puckIcon="megaphone" />
@@ -240,7 +188,13 @@ export default function ScreenCommunication({ E, refresh, role, session, searchF
               <thead><tr><th>Campaign</th><th>Channel</th><th>Audience</th><th className="num">Sent</th><th className="num">Delivered</th><th>When</th></tr></thead>
               <tbody>
                 {broadcasts.length === 0 && (
-                  <tr><td colSpan={6} className="empty">No broadcasts yet. Compose your first message on the right.</td></tr>
+                  <tr><td colSpan={6} style={{ padding: 0 }}>
+                    <EmptyState
+                      icon="megaphone"
+                      title="No broadcasts sent yet"
+                      body="Reach every parent at once over WhatsApp or SMS. Compose your first message on the right."
+                    />
+                  </td></tr>
                 )}
                 {broadcasts.map((b) => {
                   const when = b.sentAt ? new Date(b.sentAt) : null;
@@ -277,7 +231,11 @@ export default function ScreenCommunication({ E, refresh, role, session, searchF
               )}
             </div>
             {templates.length === 0 ? (
-              <div className="empty">No templates yet. Add DLT-approved templates to send bulk messages.</div>
+              <EmptyState
+                icon="mail"
+                title="No templates yet"
+                body="Indian telecom rules require DLT-approved templates for bulk SMS. Add yours here once and reuse them."
+              />
             ) : (
               <div style={{ padding: "8px 14px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
                 {templates.map((t) => (
@@ -498,7 +456,7 @@ function audienceRecipients(value, students, pending) {
   const out = [];
   const seen = new Set();
   for (const s of pool) {
-    const phone = parentPhoneOf(s);
+    const phone = guardianPhone(s);
     if (!phone) continue;
     if (seen.has(phone)) continue; // dedupe siblings sharing a parent phone
     seen.add(phone);

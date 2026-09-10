@@ -51,9 +51,11 @@ export async function GET() {
 // value is mirrored onto the linked staff row so a teacher's account
 // stays in sync with their staff record.
 //
-// To set a new password, the user must verify their current one (or be
-// using the demo seed which doesn't have a hash yet — first-set is
-// allowed in that case).
+// To set a new password, the user must verify their current one. There is
+// no exemption: this used to skip the check whenever the stored hash was
+// missing, which also skipped it whenever the user lookup failed — so a
+// transient database error let anyone holding a session rewrite their own
+// password without knowing the old one.
 export async function PATCH(req) {
   const session = await getSession();
   if (!session) return NextResponse.json({ ok: false, error: "Sign in required" }, { status: 401 });
@@ -87,21 +89,40 @@ export async function PATCH(req) {
     }
   }
 
-  // If password change requested, verify the current one against the
-  // stored hash. Demo accounts that haven't set a real password yet skip
-  // the check (their hash is empty / null).
+  // A password change always requires the current password, verified
+  // against the stored hash. Every branch below fails closed: no user row,
+  // no hash, or a failed lookup all reject rather than waving the change
+  // through.
   if (wantsPassword) {
     if (typeof body.newPassword !== "string" || body.newPassword.length < 6) {
       return NextResponse.json({ ok: false, error: "New password must be at least 6 characters" }, { status: 400 });
     }
-    const user = await getUserByEmail(session.email);
-    if (user?.passwordHash) {
-      if (!body.currentPassword) {
-        return NextResponse.json({ ok: false, error: "Current password is required" }, { status: 400 });
-      }
-      const ok = await verifyPassword(body.currentPassword, user.passwordHash);
-      if (!ok) return NextResponse.json({ ok: false, error: "Current password is incorrect" }, { status: 401 });
+    if (!body.currentPassword) {
+      return NextResponse.json({ ok: false, error: "Current password is required" }, { status: 400 });
     }
+
+    let user = null;
+    try {
+      user = await getUserByEmail(session.email);
+    } catch (e) {
+      console.error("[profile] user lookup failed during password change:", e?.message);
+      return NextResponse.json(
+        { ok: false, error: "We couldn't verify your password just now. Please try again." },
+        { status: 503 }
+      );
+    }
+    if (!user?.passwordHash) {
+      // No hash on the account. An admin has to issue one via Reset
+      // password — a self-service first-set here would let anyone who
+      // reached a session claim the account outright.
+      return NextResponse.json(
+        { ok: false, error: "This account has no password set. Ask an admin to reset it." },
+        { status: 409 }
+      );
+    }
+
+    const ok = await verifyPassword(body.currentPassword, user.passwordHash);
+    if (!ok) return NextResponse.json({ ok: false, error: "Current password is incorrect" }, { status: 401 });
   }
 
   let updated;

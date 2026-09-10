@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Icon from "../Icon";
-import { KPI, BarChart, LineBarChart, Ring, AvatarChip, EmptyState } from "../ui";
+import { KPI, BarChart, LineBarChart, Ring, AvatarChip, EmptyState, PageHeader } from "../ui";
 import QuickAccessRecent from "../QuickAccessRecent";
 import AttendanceTodayCard from "../AttendanceTodayCard";
 import { money, moneyK, formatClassLabel, feeTypeLabel, getWorkingDays, getHolidayDates, attendanceFromLogs } from "@/lib/format";
+import { vocab } from "@/lib/institution";
 
 // Deferred current-time state. Returns 0 during SSR + the first client
 // render, then flips to a real Date.now() after mount and ticks every
@@ -98,6 +99,11 @@ function buildCashSeries(receipts, expenses) {
 }
 
 export default function ScreenDashboard({ E, role, session, refresh, setCurrent, onOpenItem }) {
+  // Institution vocabulary — "class" or "semester", "teacher" or "faculty".
+  // Read at render time so the wording matches whichever institution this
+  // session belongs to; AppShell sets the mode from the session's tenant
+  // before any screen renders.
+  const V = vocab();
   const { KPIS, CLASS_STRENGTH, RECENT_FEES, PENDING_FEES, ACTIVITIES, ROUTES, INCOME_SERIES, EXPENSES } = E;
   const isParent = role === "parent";
   const child = isParent ? (E.ADDED_STUDENTS || [])[0] : null;
@@ -173,7 +179,7 @@ export default function ScreenDashboard({ E, role, session, refresh, setCurrent,
   // ("Good morning, Rashmi"). Updates everywhere when the user renames
   // themselves on the My Account page (we re-issue the session JWT, so
   // session.name is current). Falls back to the full name or "there" for
-  // edge cases (no name on the session, e.g. seeded demo accounts).
+  // edge cases where the session carries no display name.
   const firstName = (() => {
     const raw = session?.name || "";
     const first = raw.trim().split(/\s+/)[0];
@@ -201,17 +207,11 @@ export default function ScreenDashboard({ E, role, session, refresh, setCurrent,
 
   return (
     <div className="page">
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">{dateLabel || "\u00A0"}</div>
-          <div className="page-title">
-            {greet}, <span className="amber">{firstName}</span>.
-          </div>
-          <div className="page-sub">
-            Here&rsquo;s what&rsquo;s happening across the school today — collection, attendance and transport at a glance.
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow={dateLabel || "\u00A0"}
+        title={<>{greet}, {firstName}.</>}
+        sub={<>Here&rsquo;s what&rsquo;s happening across the {V.kindLower} today — collection, attendance and transport at a glance.</>}
+      />
 
       <QuickAccessRecent role={role} session={session} onOpenItem={onOpenItem} />
 
@@ -240,7 +240,9 @@ export default function ScreenDashboard({ E, role, session, refresh, setCurrent,
           <div className="grid g-4" style={{ marginBottom: 20 }}>
             <KPI
               label="Students on roll" value={studentCount.toLocaleString("en-IN")}
-              sub={studentCount ? `across ${Object.keys(studentsByClass).length} class${Object.keys(studentsByClass).length === 1 ? "" : "es"}` : "no students added yet"}
+              sub={studentCount
+                ? `across ${Object.keys(studentsByClass).length} ${Object.keys(studentsByClass).length === 1 ? V.cohortWord.toLowerCase() : V.classPlural.toLowerCase()}`
+                : "no students admitted yet"}
               puck="mint" puckIcon="students"
               details={{
                 title: `Students · ${studentCount} on roll`,
@@ -454,7 +456,7 @@ export default function ScreenDashboard({ E, role, session, refresh, setCurrent,
           openComplaints.length && { tone: "bad", icon: "complaint", title: `${openComplaints.length} pending complaint${openComplaints.length === 1 ? "" : "s"}`, sub: openComplaints.slice(0, 3).map((c) => c.student || "—").join(" · ") },
           absentToday.length      && { tone: "warn", icon: "users",     title: `${absentToday.length} student${absentToday.length === 1 ? "" : "s"} absent today`, sub: absentToday.slice(0, 3).map((l) => l.studentName).join(" · ") },
           lateStudents.length     && { tone: "warn", icon: "clock",     title: `${lateStudents.length} student${lateStudents.length === 1 ? "" : "s"} late today`, sub: lateStudents.slice(0, 3).map((l) => l.studentName).join(" · ") },
-          lateTeachers.length     && { tone: "warn", icon: "clock",     title: `${lateTeachers.length} teacher${lateTeachers.length === 1 ? "" : "s"} late today`, sub: lateTeachers.slice(0, 3).map((r) => r.teacherName).join(" · ") },
+          lateTeachers.length     && { tone: "warn", icon: "clock",     title: `${lateTeachers.length} ${(lateTeachers.length === 1 ? V.educator : V.educatorPlural).toLowerCase()} late today`, sub: lateTeachers.slice(0, 3).map((r) => r.teacherName).join(" · ") },
           pendingHomework.length  && { tone: "warn", icon: "book",      title: `${pendingHomework.length} pending homework`, sub: pendingHomework.slice(0, 3).map((l) => l.studentName).join(" · ") },
           incompleteClasswork.length && { tone: "warn", icon: "pencil", title: `${incompleteClasswork.length} classwork not completed`, sub: incompleteClasswork.slice(0, 3).map((l) => l.studentName).join(" · ") },
           overdueFees.length      && { tone: "bad",  icon: "fees",      title: `${overdueFees.length} overdue fee${overdueFees.length === 1 ? "" : "s"}`, sub: overdueFees.slice(0, 3).map((f) => f.name).join(" · ") },
@@ -604,45 +606,47 @@ export default function ScreenDashboard({ E, role, session, refresh, setCurrent,
               View all <Icon name="chevronRight" size={11} />
             </button>
           </div>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Student</th>
-                <th>Class</th>
-                <th className="num">Amount</th>
-                <th>When</th>
-              </tr>
-            </thead>
-            <tbody>
-              {RECENT_FEES.length === 0 && (
-                <tr><td colSpan={4} style={{ padding: 0 }}>
-                  <EmptyState
-                    icon="fees"
-                    title="No fees collected yet"
-                    body="Receipts appear here the moment a payment is recorded on the Fees screen."
-                  />
-                </td></tr>
-              )}
-              {RECENT_FEES.slice(0, 6).map((f) => (
-                <tr key={f.id}>
-                  <td>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <AvatarChip initials={f.name.split(" ").map((n) => n[0]).join("")} />
-                      <div>
-                        <div style={{ fontSize: 12.5, fontWeight: 500 }}>{f.name}</div>
-                        <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-4)" }}>{f.id}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <span className="chip">{formatClassLabel(f.cls)}</span>
-                  </td>
-                  <td className="num">{money(f.amount)}</td>
-                  <td style={{ color: "var(--ink-3)", fontSize: 12 }}>{f.time}</td>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Class</th>
+                  <th className="num">Amount</th>
+                  <th>When</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {RECENT_FEES.length === 0 && (
+                  <tr><td colSpan={4} style={{ padding: 0 }}>
+                    <EmptyState
+                      icon="fees"
+                      title="No fees collected yet"
+                      body="Receipts appear here the moment a payment is recorded on the Fees screen."
+                    />
+                  </td></tr>
+                )}
+                {RECENT_FEES.slice(0, 6).map((f) => (
+                  <tr key={f.id}>
+                    <td>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <AvatarChip initials={f.name.split(" ").map((n) => n[0]).join("")} />
+                        <div>
+                          <div style={{ fontSize: 12.5, fontWeight: 500 }}>{f.name}</div>
+                          <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-4)" }}>{f.id}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span className="chip">{formatClassLabel(f.cls)}</span>
+                    </td>
+                    <td className="num">{money(f.amount)}</td>
+                    <td style={{ color: "var(--ink-3)", fontSize: 12 }}>{f.time}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div className="card col-4">
@@ -656,51 +660,53 @@ export default function ScreenDashboard({ E, role, session, refresh, setCurrent,
               Remind all
             </button>
           </div>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Student</th>
-                <th className="num">Amount</th>
-                <th>Due</th>
-              </tr>
-            </thead>
-            <tbody>
-              {PENDING_FEES.length === 0 && (
-                <tr><td colSpan={3} style={{ padding: 0 }}>
-                  <EmptyState
-                    icon="check"
-                    title="Nothing outstanding"
-                    body="Every raised fee has been settled. New dues will show up here as they fall due."
-                  />
-                </td></tr>
-              )}
-              {PENDING_FEES.map((f) => (
-                <tr key={f.id}>
-                  <td>
-                    <div style={{ fontSize: 12.5, fontWeight: 500 }}>
-                      {f.name}{" "}
-                      <span style={{ color: "var(--ink-4)", fontWeight: 400, marginLeft: 4 }}>{formatClassLabel(f.cls)}</span>
-                    </div>
-                    <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-4)" }}>{f.id}</div>
-                  </td>
-                  <td className="num">{money(f.amount)}</td>
-                  <td>
-                    {f.overdue ? (
-                      <span className="chip bad">
-                        <span className="dot" />
-                        {f.due}
-                      </span>
-                    ) : (
-                      <span className="chip warn">
-                        <span className="dot" />
-                        {f.due}
-                      </span>
-                    )}
-                  </td>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th className="num">Amount</th>
+                  <th>Due</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {PENDING_FEES.length === 0 && (
+                  <tr><td colSpan={3} style={{ padding: 0 }}>
+                    <EmptyState
+                      icon="check"
+                      title="Nothing outstanding"
+                      body="Every raised fee has been settled. New dues will show up here as they fall due."
+                    />
+                  </td></tr>
+                )}
+                {PENDING_FEES.map((f) => (
+                  <tr key={f.id}>
+                    <td>
+                      <div style={{ fontSize: 12.5, fontWeight: 500 }}>
+                        {f.name}{" "}
+                        <span style={{ color: "var(--ink-4)", fontWeight: 400, marginLeft: 4 }}>{formatClassLabel(f.cls)}</span>
+                      </div>
+                      <div className="mono" style={{ fontSize: 10.5, color: "var(--ink-4)" }}>{f.id}</div>
+                    </td>
+                    <td className="num">{money(f.amount)}</td>
+                    <td>
+                      {f.overdue ? (
+                        <span className="chip bad">
+                          <span className="dot" />
+                          {f.due}
+                        </span>
+                      ) : (
+                        <span className="chip warn">
+                          <span className="dot" />
+                          {f.due}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div className="card col-3">
@@ -773,13 +779,11 @@ function ParentDashboard({ child, greet, firstName, dateLabel, todayIso, E, sess
   if (!child) {
     return (
       <div className="page">
-        <div className="page-head">
-          <div>
-            <div className="page-eyebrow">{dateLabel || " "}</div>
-            <div className="page-title">{greet}, <span className="amber">{firstName}</span>.</div>
-            <div className="page-sub">Ask the school office to link your account to your child's record.</div>
-          </div>
-        </div>
+        <PageHeader
+          eyebrow={dateLabel || " "}
+          title={<>{greet}, {firstName}.</>}
+          sub={"Ask the school office to link your account to your child's record."}
+        />
       </div>
     );
   }
@@ -935,15 +939,11 @@ function ParentDashboard({ child, greet, firstName, dateLabel, todayIso, E, sess
 
   return (
     <div className="page">
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">{dateLabel || " "}</div>
-          <div className="page-title">
-            {greet}, <span className="amber">{firstName || child.name.split(" ")[0]}</span>.
-          </div>
-          <div className="page-sub">Today's classroom report, attendance, transport, and any messages from the school.</div>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow={dateLabel || " "}
+        title={<>{greet}, {firstName || child.name.split(" ")[0]}.</>}
+        sub={"Today's classroom report, attendance, transport, and any messages from the school."}
+      />
 
       {/* Child + class teacher snapshot strip. Sits between the greeting
           and the KPI row so parents see "who is my child, who teaches
@@ -1376,33 +1376,35 @@ function ParentDashboard({ child, greet, firstName, dateLabel, todayIso, E, sess
           <div className="card-head">
             <div><div className="card-title">Fees</div><div className="card-sub">{myFees.length ? `${myFees.length} pending · ${myPaid.length} paid this term` : `All clear · ${myPaid.length} receipt${myPaid.length === 1 ? "" : "s"} this term`}</div></div>
           </div>
-          <table className="table">
-            <thead><tr><th>Status</th><th>Description</th><th className="num">Amount</th><th>When / Due</th></tr></thead>
-            <tbody>
-              {myFees.length === 0 && myPaid.length === 0 && (
-                <tr><td colSpan={4} className="empty">No fee history yet.</td></tr>
-              )}
-              {myFees.map((f) => (
-                <tr key={`p-${f.id}-${f.due}`}>
-                  <td><span className={`chip ${f.overdue ? "bad" : "warn"}`}><span className="dot" />{f.overdue ? "Overdue" : "Pending"}</span></td>
-                  <td style={{ fontSize: 13 }}>{feeTypeLabel(f.feeType || f.fee_type)} · {formatClassLabel(f.cls || child.cls)}</td>
-                  <td className="num" style={{ fontWeight: 500 }}>₹{(f.amount || 0).toLocaleString("en-IN")}</td>
-                  <td style={{ fontSize: 12, color: "var(--ink-3)" }}>{f.due}</td>
-                </tr>
-              ))}
-              {myPaid.slice(0, 5).map((f, i) => (
-                <tr key={`r-${f.id}-${i}`}>
-                  <td><span className="chip ok"><span className="dot" />Paid</span></td>
-                  <td style={{ fontSize: 13 }}>
-                    {feeTypeLabel(f.feeType || f.fee_type)} · {formatClassLabel(f.cls || child.cls)}
-                    {f.method ? <span style={{ color: "var(--ink-4)", fontSize: 11 }}> ({f.method})</span> : null}
-                  </td>
-                  <td className="num" style={{ fontWeight: 500 }}>₹{(f.amount || 0).toLocaleString("en-IN")}</td>
-                  <td style={{ fontSize: 12, color: "var(--ink-3)" }}>{f.time}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="table-wrap">
+            <table className="table">
+              <thead><tr><th>Status</th><th>Description</th><th className="num">Amount</th><th>When / Due</th></tr></thead>
+              <tbody>
+                {myFees.length === 0 && myPaid.length === 0 && (
+                  <tr><td colSpan={4} className="empty">No fee history yet.</td></tr>
+                )}
+                {myFees.map((f) => (
+                  <tr key={`p-${f.id}-${f.due}`}>
+                    <td><span className={`chip ${f.overdue ? "bad" : "warn"}`}><span className="dot" />{f.overdue ? "Overdue" : "Pending"}</span></td>
+                    <td style={{ fontSize: 13 }}>{feeTypeLabel(f.feeType || f.fee_type)} · {formatClassLabel(f.cls || child.cls)}</td>
+                    <td className="num" style={{ fontWeight: 500 }}>₹{(f.amount || 0).toLocaleString("en-IN")}</td>
+                    <td style={{ fontSize: 12, color: "var(--ink-3)" }}>{f.due}</td>
+                  </tr>
+                ))}
+                {myPaid.slice(0, 5).map((f, i) => (
+                  <tr key={`r-${f.id}-${i}`}>
+                    <td><span className="chip ok"><span className="dot" />Paid</span></td>
+                    <td style={{ fontSize: 13 }}>
+                      {feeTypeLabel(f.feeType || f.fee_type)} · {formatClassLabel(f.cls || child.cls)}
+                      {f.method ? <span style={{ color: "var(--ink-4)", fontSize: 11 }}> ({f.method})</span> : null}
+                    </td>
+                    <td className="num" style={{ fontWeight: 500 }}>₹{(f.amount || 0).toLocaleString("en-IN")}</td>
+                    <td style={{ fontSize: 12, color: "var(--ink-3)" }}>{f.time}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

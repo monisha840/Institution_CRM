@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../Icon";
 import { resolveSchool, downloadPdf } from "@/lib/export";
 import { formatClassLabel } from "@/lib/format";
-import { KPI, StatusChip } from "../ui";
+import { KPI, StatusChip, ScreenToast as Toast, EmptyState, PageHeader } from "../ui";
 
 // Three buckets every parent complaint falls into. Order matters — it's the
 // order shown in the picker chips and the staff filter strip. The default
@@ -179,20 +179,9 @@ export default function ScreenComplaints({ E, refresh, role, session, searchFocu
     <div className="page">
       <Toast toast={toast} />
 
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">{isParent ? "Family · Raise query" : "CRM · Complaints"}</div>
-          <div className="page-title">
-            {isParent ? <>Talk to <span className="amber">the school</span></> : <>Parent <span className="amber">complaints</span></>}
-          </div>
-          <div className="page-sub">
-            {isParent
-              ? "Raise a concern, or submit a leave request for your child. We respond as soon as possible."
-              : "Open · in progress · resolved · auto-routed by category"}
-          </div>
-        </div>
-        <div className="page-actions">
-          {isParent ? (
+      <PageHeader
+        sub={isParent ? "Raise a concern, or submit a leave request for your child. We respond as soon as possible." : "Open · in progress · resolved · auto-routed by category"}
+        actions={<>{isParent ? (
             <button className="btn accent" onClick={() => setShowForm(true)}><Icon name="plus" size={13} />New query</button>
           ) : (
             <>
@@ -205,9 +194,8 @@ export default function ScreenComplaints({ E, refresh, role, session, searchFocu
                 </button>
               )}
             </>
-          )}
-        </div>
-      </div>
+          )}</>}
+      />
 
       <div className="grid g-4" style={{ marginBottom: 14 }}>
         {(() => {
@@ -329,10 +317,15 @@ export default function ScreenComplaints({ E, refresh, role, session, searchFocu
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={isParent ? 7 : 9} className="empty">
-                  {isParent
-                    ? `You haven't raised any queries yet. Click "New query" to start.`
-                    : "No complaints match this filter."}
+                <tr><td colSpan={isParent ? 7 : 9} style={{ padding: 0 }}>
+                  <EmptyState
+                    icon="complaint"
+                    title={isParent ? "You haven't raised any queries" : "No complaints match this filter"}
+                    body={isParent
+                      ? "Raise a query and the school office sees it immediately, with a thread you can follow."
+                      : "Switch status or category to see the rest of the queue."}
+                    action={isParent ? <button className="btn accent sm" onClick={() => setShowForm(true)}><Icon name="plus" size={12} />New query</button> : null}
+                  />
                 </td></tr>
               )}
               {filtered.map((c) => {
@@ -487,9 +480,11 @@ function StaffLogModal({ students, onClose, onSubmit }) {
           )}
           <Field label="Student *">
             {students.length === 0 ? (
-              <div className="empty" style={{ padding: 12, fontSize: 12 }}>
-                No students on the roster yet. Add students from the Students screen first.
-              </div>
+              <EmptyState
+                icon="students"
+                title="No students on the roster"
+                body="A complaint has to be linked to a student. Admit at least one on the Students screen first."
+              />
             ) : (
               <select className="select" value={studentId} onChange={(e) => setStudentId(e.target.value)} autoFocus>
                 {students.map((s) => (
@@ -653,14 +648,3 @@ function Field({ label, children }) {
   );
 }
 
-function Toast({ toast }) {
-  if (!toast) return null;
-  const bg = toast.tone === "bad" ? "var(--bad)" : toast.tone === "warn" ? "var(--warn)" : "var(--ok)";
-  return (
-    <div style={{
-      position: "fixed", top: 76, left: "50%", transform: "translateX(-50%)",
-      zIndex: 300, background: bg, color: "#fff", padding: "10px 18px",
-      borderRadius: 999, fontSize: 12.5, fontWeight: 500, boxShadow: "var(--shadow-lg)",
-    }}>{toast.msg}</div>
-  );
-}

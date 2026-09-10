@@ -198,11 +198,11 @@ export default function TransportEventPopup() {
         {/* Bus icon */}
         <div style={{
           width: 64, height: 64, borderRadius: "50%",
-          background: "linear-gradient(160deg, var(--accent-soft, #fde6d6), rgba(232,83,14,0.12))",
+          background: "linear-gradient(160deg, var(--accent-soft), color-mix(in srgb, var(--accent) 12%, transparent))",
           color: "var(--accent, #e8530e)",
           display: "grid", placeItems: "center",
           margin: "0 auto 18px",
-          border: "1px solid rgba(232,83,14,0.2)",
+          border: "1px solid color-mix(in srgb, var(--accent) 20%, transparent)",
         }}>
           <Icon name="bus" size={30} />
         </div>
@@ -243,12 +243,12 @@ export default function TransportEventPopup() {
           style={{
             width: "100%",
             padding: "12px 16px",
-            background: "var(--accent, #e8530e)",
-            color: "#fff",
+            background: "var(--accent)",
+            color: "var(--accent-ink)",
             border: 0, borderRadius: 10,
             fontSize: 14, fontWeight: 600,
             cursor: "pointer",
-            boxShadow: "0 6px 18px -10px rgba(232,83,14,0.5)",
+            boxShadow: "0 6px 18px -10px color-mix(in srgb, var(--accent) 50%, transparent)",
           }}
         >
           OK, got it

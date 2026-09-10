@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../Icon";
-import { KPI, LineBarChart } from "../ui";
+import { KPI, LineBarChart, ScreenToast as Toast, EmptyState, ModalShell, PageHeader } from "../ui";
 import { money, moneyK, formatClassLabel } from "@/lib/format";
 
 const EXPENSE_CATEGORIES = [
@@ -31,43 +31,7 @@ const INVENTORY_CATEGORIES = [
   { value: "sports",     label: "Sports" },
 ];
 
-function Toast({ msg, tone, onClose }) {
-  if (!msg) return null;
-  const bg = tone === "ok" ? "var(--ok)" : tone === "err" ? "var(--err, #b13c1c)" : "var(--ink)";
-  return (
-    <div onClick={onClose} role="status" style={{
-      position: "fixed", bottom: 18, right: 18, zIndex: 9000,
-      background: bg, color: "#fff", padding: "9px 14px", borderRadius: 8,
-      fontSize: 12, fontWeight: 500, cursor: "pointer", maxWidth: 360,
-      boxShadow: "0 12px 30px -16px rgba(0,0,0,0.35)",
-    }}>{msg}</div>
-  );
-}
 
-function ModalShell({ title, sub, onClose, children, width = 480 }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  return (
-    <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "var(--overlay)",
-      display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
-    }}>
-      <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: width, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
-        <div className="card-head">
-          <div>
-            <div className="card-title">{title}</div>
-            {sub && <div className="card-sub">{sub}</div>}
-          </div>
-          <button className="icon-btn" onClick={onClose}><Icon name="x" size={14} /></button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 function Field({ label, children, hint }) {
   return (
@@ -257,20 +221,9 @@ export default function ScreenMoney({ E, refresh, role, searchFocus, clearSearch
     <div className="page">
       <Toast msg={toast?.msg} tone={toast?.tone} onClose={() => setToast(null)} />
 
-      <div className="page-head">
-        <div>
-          <div className="page-title">
-            {isTrustOnly ? <>Trust <span className="amber">expenses</span></>
-                         : <>Money <span className="amber">Control</span></>}
-          </div>
-          <div className="page-sub">
-            {isTrustOnly
-              ? <>Trust ledger only · donations, donor receipts, trust expenses.</>
-              : <>Two streams kept separate: <strong>Spent</strong> (manual expenses + inventory purchases) and <strong>Collected</strong> (student fees, donations, trust receipts).</>}
-          </div>
-        </div>
-        <div className="page-actions">
-          {!isTrustOnly && (
+      <PageHeader
+        sub={isTrustOnly ? <>Trust ledger only · donations, donor receipts, trust expenses.</> : <>Two streams kept separate: <strong>Spent</strong> (manual expenses + inventory purchases) and <strong>Collected</strong> (student fees, donations, trust receipts).</>}
+        actions={<>{!isTrustOnly && (
             <div className="segmented">
               {["Combined", "School only", "Trust only"].map((s) => (
                 <button key={s} className={accountScope === s ? "active" : ""} onClick={() => setAccountScope(s)}>{s}</button>
@@ -281,9 +234,8 @@ export default function ScreenMoney({ E, refresh, role, searchFocus, clearSearch
             <button className="btn accent" onClick={() => setShowAddExpense(true)}>
               <Icon name="plus" size={13} />Add money spent
             </button>
-          )}
-        </div>
-      </div>
+          )}</>}
+      />
 
       {(() => {
         // Pre-compute popover breakdowns once so each KPI's `details` is
@@ -553,10 +505,14 @@ export default function ScreenMoney({ E, refresh, role, searchFocus, clearSearch
               <thead><tr><th>ID</th><th>Date</th><th>Description</th><th>Account</th><th>Category</th><th>Method</th><th className="num">Amount</th>{canEdit && <th></th>}</tr></thead>
               <tbody>
                 {filteredTxns.length === 0 && (
-                  <tr><td colSpan={canEdit ? 8 : 7} className="empty">
-                    {TXNS.length === 0
-                      ? "No transactions yet. Fee receipts, donations and logged expenses will appear here."
-                      : "No transactions match the current filters."}
+                  <tr><td colSpan={canEdit ? 8 : 7} style={{ padding: 0 }}>
+                    <EmptyState
+                      icon="money"
+                      title={TXNS.length === 0 ? "No transactions yet" : "Nothing matches these filters"}
+                      body={TXNS.length === 0
+                        ? "Fee receipts, donations and logged expenses all flow into this ledger automatically."
+                        : "Widen the date range or clear the category filter."}
+                    />
                   </td></tr>
                 )}
                 {filteredTxns.map((t) => (
@@ -736,7 +692,7 @@ function TemplateEditModal({ template, defaultScope, lockScope = false, customCa
   }
 
   return (
-    <ModalShell
+    <ModalShell width={480}
       title={isEdit ? `Edit template · ${template.name}` : "New expense template"}
       sub="Saved defaults that pre-fill the Add Expense modal in one click."
       onClose={onClose}
@@ -935,7 +891,7 @@ function AddExpenseModal({ onClose, onSubmit, defaultScope, lockScope = false, c
   }
 
   return (
-    <ModalShell title="Add money spent" sub="Records the spend in the ledger under the chosen account." onClose={onClose}>
+    <ModalShell width={480} title="Add money spent" sub="Records the spend in the ledger under the chosen account." onClose={onClose}>
       <form onSubmit={submit} className="card-body" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <Field label="Account *">

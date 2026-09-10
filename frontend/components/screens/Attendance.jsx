@@ -2,21 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../Icon";
-import { KPI, AvatarChip, SkeletonTable, EmptyState } from "../ui";
+import { KPI, AvatarChip, SkeletonTable, EmptyState, ScreenToast as Toast, PageHeader } from "../ui";
 import { formatClassLabel, getWorkingDays, getHolidayDates, attendanceFromLogs } from "@/backend/lib/format.js";
 
-function Toast({ msg, tone, onClose }) {
-  if (!msg) return null;
-  const bg = tone === "ok" ? "var(--ok)" : tone === "err" ? "var(--err, #b13c1c)" : "var(--ink)";
-  return (
-    <div onClick={onClose} role="status" style={{
-      position: "fixed", bottom: 18, right: 18, zIndex: 9000,
-      background: bg, color: "#fff", padding: "9px 14px", borderRadius: 8,
-      fontSize: 12, fontWeight: 500, cursor: "pointer", maxWidth: 360,
-      boxShadow: "0 12px 30px -16px rgba(0,0,0,0.35)",
-    }}>{msg}</div>
-  );
-}
 
 export default function ScreenAttendance({ E, refresh, role, session }) {
   // Parents get a child-scoped read-only view — no class picker, no
@@ -205,13 +193,9 @@ export default function ScreenAttendance({ E, refresh, role, session }) {
 
   return (
     <div className="page">
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">People · Attendance</div>
-          <div className="page-title">Attendance <span className="amber">today</span></div>
-          <div className="page-sub">{todayLabel || " "} · marks save to today's daily log for each student</div>
-        </div>
-        <div className="page-actions">
+      <PageHeader
+        sub={<>{todayLabel || " "} · marks save to today&rsquo;s daily log for each student</>}
+        actions={<>
           {mode === "students" && roster.length > 0 && (
             <>
               <button className="btn" onClick={() => markAll("present")} disabled={busy || lockedForToday}>
@@ -229,9 +213,8 @@ export default function ScreenAttendance({ E, refresh, role, session }) {
                 {busy ? "Saving…" : lockedForToday ? <><Icon name="check" size={13} />Recorded for today</> : <><Icon name="check" size={13} />Save attendance</>}
               </button>
             </>
-          )}
-        </div>
-      </div>
+          )}</>}
+      />
 
       {/* Mode tab strip. Admin/principal get the full set; teachers get their
           own two tabs (mark today + view history). */}
@@ -422,7 +405,7 @@ export default function ScreenAttendance({ E, refresh, role, session }) {
           </div>
         </div>
         <div style={{ overflowX: "auto" }}>
-          <table className="table">
+          <table className="table idx">
             <thead>
               <tr>
                 <th style={{ width: 36 }}>#</th>
@@ -645,7 +628,7 @@ function TeacherAttendancePanel({ E, today, todayLabel, refresh, showToast }) {
           </div>
         </div>
         <div style={{ overflowX: "auto" }}>
-          <table className="table">
+          <table className="table idx">
             <thead>
               <tr><th>#</th><th>Teacher</th><th>Email</th><th style={{ textAlign: "right" }}>Mark</th></tr>
             </thead>
@@ -715,13 +698,11 @@ function ParentAttendanceView({ E }) {
   if (!child) {
     return (
       <div className="page">
-        <div className="page-head">
-          <div>
-            <div className="page-eyebrow">PEOPLE · ATTENDANCE</div>
-            <div className="page-title">Attendance</div>
-            <div className="page-sub">Ask the school office to link your account to your child's record.</div>
-          </div>
-        </div>
+        <PageHeader
+          eyebrow="My family"
+          title="Attendance"
+          sub={"Ask the school office to link your account to your child's record."}
+        />
       </div>
     );
   }
@@ -778,15 +759,11 @@ function ParentAttendanceView({ E }) {
 
   return (
     <div className="page">
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">PEOPLE · ATTENDANCE</div>
-          <div className="page-title">Attendance <span className="amber">history</span></div>
-          <div className="page-sub">
-            {child.name} · {formatClassLabel(child.cls)} · {totalLogs} day{totalLogs === 1 ? "" : "s"} logged so far
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="My family"
+        title="Attendance history"
+        sub={<>{child.name} · {formatClassLabel(child.cls)} · {totalLogs} day{totalLogs === 1 ? "" : "s"} logged so far</>}
+      />
 
       {/* KPI strip */}
       <div className="grid g-4" style={{ marginBottom: 18 }}>
@@ -1080,7 +1057,7 @@ function CorrectPastAttendancePanel({ E, todayIso, refresh, showToast }) {
           </div>
         </div>
         <div style={{ overflowX: "auto" }}>
-          <table className="table">
+          <table className="table idx">
             <thead>
               <tr>
                 <th style={{ width: 36 }}>#</th>
@@ -1109,7 +1086,7 @@ function CorrectPastAttendancePanel({ E, todayIso, refresh, showToast }) {
                 const needsReason = m.state && m.state !== "present";
                 const isChanged = m.state && m.state !== m.original;
                 return (
-                  <tr key={s.id} style={isChanged ? { background: "var(--accent-soft, rgba(232,83,14,0.06))" } : null}>
+                  <tr key={s.id} style={isChanged ? { background: "var(--accent-soft)" } : null}>
                     <td style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--ink-4)" }}>{String(i + 1).padStart(2, "0")}</td>
                     <td>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1364,7 +1341,7 @@ function AttendanceHistoryPanel({ E, role, isTeacher, todayIso, teacherClassList
               </div>
             </div>
             <div style={{ overflowX: "auto" }}>
-              <table className="table">
+              <table className="table idx">
                 <thead>
                   <tr>
                     <th style={{ width: 36 }}>#</th>

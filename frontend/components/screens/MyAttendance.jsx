@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Icon from "../Icon";
-import { KPI } from "../ui";
+import { KPI, ScreenToast as Toast, EmptyState, PageHeader } from "../ui";
 
 const STATUSES = [
   { k: "present", label: "Present", tone: "ok",   color: "var(--ok)" },
@@ -12,18 +12,6 @@ const STATUSES = [
 ];
 const STATUS_LABEL = { present: "Present", late: "Late", absent: "Absent", leave: "Leave" };
 
-function Toast({ msg, tone, onClose }) {
-  if (!msg) return null;
-  const bg = tone === "ok" ? "var(--ok)" : tone === "err" ? "var(--err, #b13c1c)" : "var(--ink)";
-  return (
-    <div onClick={onClose} role="status" style={{
-      position: "fixed", bottom: 18, right: 18, zIndex: 9000,
-      background: bg, color: "#fff", padding: "9px 14px", borderRadius: 8,
-      fontSize: 12, fontWeight: 500, cursor: "pointer", maxWidth: 360,
-      boxShadow: "0 12px 30px -16px rgba(0,0,0,0.35)",
-    }}>{msg}</div>
-  );
-}
 
 export default function ScreenMyAttendance({ E, refresh, role, session }) {
   const today = new Date().toISOString().slice(0, 10);
@@ -105,13 +93,9 @@ export default function ScreenMyAttendance({ E, refresh, role, session }) {
     <div className="page">
       <Toast msg={toast?.msg} tone={toast?.tone} onClose={() => setToast(null)} />
 
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">My classroom · Attendance</div>
-          <div className="page-title">My <span className="amber">attendance</span></div>
-          <div className="page-sub">{todayLabel} · self-mark your status today</div>
-        </div>
-      </div>
+      <PageHeader
+        sub={<>{todayLabel} · self-mark your status today</>}
+      />
 
       {/* Today's mark — the headline tile */}
       <div className="card" style={{ marginBottom: 14, padding: 22, display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
@@ -205,7 +189,15 @@ export default function ScreenMyAttendance({ E, refresh, role, session }) {
               <tr><th>Date</th><th>Status</th><th>Reason</th><th>Marked by</th><th>Marked at</th></tr>
             </thead>
             <tbody>
-              {records.length === 0 && <tr><td colSpan={5} className="empty">No marks yet — use the buttons above to start.</td></tr>}
+              {records.length === 0 && (
+                <tr><td colSpan={5} style={{ padding: 0 }}>
+                  <EmptyState
+                    icon="check"
+                    title="No attendance marked yet"
+                    body="Use the buttons above to mark yourself in when you arrive; your history builds here."
+                  />
+                </td></tr>
+              )}
               {[...records].sort((a, b) => b.date.localeCompare(a.date)).map((r) => {
                 const tone = STATUSES.find((s) => s.k === r.status)?.tone || "";
                 return (

@@ -1,8 +1,12 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Sirah_CRM",
-  description: "School ERP & CRM control tower — multi-school trust for admin, principal, teacher and parent views.",
+  // Deliberately the product name, not an institution's — one deployment
+  // serves both the school and the college, and the browser tab should not
+  // claim to be whichever one you happen to be signed in to.
+  title: "Sirah CRM",
+  description:
+    "School and college ERP — admissions, fees, attendance, examinations, transport and parent communication in one system.",
   icons: { icon: "/logo.png" },
 };
 

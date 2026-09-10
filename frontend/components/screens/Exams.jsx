@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Icon from "../Icon";
-import { KPI, SkeletonTable, EmptyState } from "../ui";
+import { KPI, SkeletonTable, EmptyState, ScreenToast as Toast, ModalShell, PageHeader } from "../ui";
 import { formatClassLabel } from "@/lib/format";
 import { isCollege, vocab, computeGpa, gradeFor, gpaClass } from "@/lib/institution";
 
@@ -35,43 +35,7 @@ const TEACHER_ATT_STATUSES = [
   { k: "leave",   label: "Leave",   tone: "warn" },
 ];
 
-function Toast({ msg, tone, onClose }) {
-  if (!msg) return null;
-  const bg = tone === "ok" ? "var(--ok)" : tone === "err" ? "var(--err, #b13c1c)" : "var(--ink)";
-  return (
-    <div onClick={onClose} role="status" style={{
-      position: "fixed", bottom: 18, right: 18, zIndex: 9000,
-      background: bg, color: "#fff", padding: "9px 14px", borderRadius: 8,
-      fontSize: 12, fontWeight: 500, cursor: "pointer", maxWidth: 360,
-      boxShadow: "0 12px 30px -16px rgba(0,0,0,0.35)",
-    }}>{msg}</div>
-  );
-}
 
-function ModalShell({ title, sub, onClose, children, width = 520 }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  return (
-    <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "var(--overlay)",
-      display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
-    }}>
-      <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: width, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
-        <div className="card-head">
-          <div>
-            <div className="card-title">{title}</div>
-            {sub && <div className="card-sub">{sub}</div>}
-          </div>
-          <button className="icon-btn" onClick={onClose}><Icon name="x" size={14} /></button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 function Field({ label, children, hint }) {
   return (
@@ -174,20 +138,14 @@ export default function ScreenExams({ E, refresh, role, session }) {
     <div className="page">
       <Toast msg={toast?.msg} tone={toast?.tone} onClose={() => setToast(null)} />
 
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">Academics · Assessment</div>
-          <div className="page-title">Exams & <span className="amber">Marks</span></div>
-          <div className="page-sub">Create assessments · enter marks · auto-feeds the academic performance report</div>
-        </div>
-        <div className="page-actions">
-          {isStaff && (
+      <PageHeader
+        sub={"Create assessments · enter marks · auto-feeds the academic performance report"}
+        actions={<>{isStaff && (
             <button className="btn accent" onClick={() => setShowAddExam(true)}>
               <Icon name="plus" size={13} />New exam
             </button>
-          )}
-        </div>
-      </div>
+          )}</>}
+      />
 
       {/* Self-attendance tile for teachers */}
       {isTeacher && (
@@ -759,7 +717,7 @@ function MarksEntryModal({ exam, students, onClose, onChanged, showToast }) {
           <div className="empty">No students in {formatClassLabel(exam.cls)}. Admit some on the Students screen first.</div>
         ) : (
           <div style={{ maxHeight: 420, overflowY: "auto", border: "1px solid var(--rule)", borderRadius: 8 }}>
-            <table className="table" style={{ width: "100%" }}>
+            <table className="table idx" style={{ width: "100%" }}>
               <thead>
                 <tr><th>#</th><th>Student</th><th className="num">Score (/{exam.maxMarks})</th><th className="num">%</th><th>Remarks</th></tr>
               </thead>

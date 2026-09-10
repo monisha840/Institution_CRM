@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { addExam, listExams, removeExam, logAudit, addBroadcast, readAllData, __EXAM_META } from "@/lib/db";
 import { supabase, supabaseEnabled, fromStudent } from "@/lib/supabase";
 import { getSession } from "@/lib/auth";
+import { tenantConfig } from "@/lib/tenants";
+import { currentTenant } from "@/lib/tenant-context";
 
 export const dynamic = "force-dynamic";
 
@@ -93,7 +95,7 @@ async function notifyParentsOfNewExam(exam, session) {
     exam.maxMarks ? `Max marks: ${exam.maxMarks}` : null,
     "",
     "Please help your child prepare. Marks will appear here once they're entered.",
-    "— Sirah Demo School",
+    `— ${tenantConfig(currentTenant()).name}`,
   ].filter(Boolean).join("\n");
 
   const campaign = `New test · ${exam.subject}`;

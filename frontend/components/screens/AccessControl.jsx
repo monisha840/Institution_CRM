@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Icon from "../Icon";
+import { ScreenToast as Toast, EmptyState, PageHeader } from "../ui";
 
 const ROLE_LABEL = {
   admin: "Admin",
@@ -17,18 +18,6 @@ const ROLE_LABEL = {
 // lib/permissions.js. Mirrored here so the UI can show the lock icon.
 const ADMIN_LOCKED = new Set(["access", "dashboard", "trust", "settings"]);
 
-function Toast({ msg, tone, onClose }) {
-  if (!msg) return null;
-  const bg = tone === "ok" ? "var(--ok)" : tone === "err" ? "var(--err, #b13c1c)" : "var(--ink)";
-  return (
-    <div onClick={onClose} role="status" style={{
-      position: "fixed", bottom: 18, right: 18, zIndex: 9000,
-      background: bg, color: "#fff", padding: "9px 14px", borderRadius: 8,
-      fontSize: 12, fontWeight: 500, cursor: "pointer", maxWidth: 360,
-      boxShadow: "0 12px 30px -16px rgba(0,0,0,0.35)",
-    }}>{msg}</div>
-  );
-}
 
 // Toggle pill — clicking flips, disabled state shown subtly.
 function Toggle({ on, onClick, disabled }) {
@@ -138,13 +127,15 @@ export default function ScreenAccessControl({ E, refresh, role, session }) {
   if (!isAdmin) {
     return (
       <div className="page">
-        <div className="page-head">
-          <div>
-            <div className="page-eyebrow">Governance · Access</div>
-            <div className="page-title">Access <span className="amber">control</span></div>
-          </div>
+        <PageHeader
+        />
+        <div className="card">
+          <EmptyState
+            icon="shield"
+            title="Admins only"
+            body="Role permissions decide what every other user can reach, so only an Admin can change them. Ask one to adjust access for you."
+          />
         </div>
-        <div className="card"><div className="empty">Only Admin can edit role permissions.</div></div>
       </div>
     );
   }
@@ -155,14 +146,10 @@ export default function ScreenAccessControl({ E, refresh, role, session }) {
     <div className="page">
       <Toast msg={toast?.msg} tone={toast?.tone} onClose={() => setToast(null)} />
 
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">Governance · Access</div>
-          <div className="page-title">Access <span className="amber">control</span></div>
-          <div className="page-sub">Toggle which features each role can see in the sidebar</div>
-        </div>
-        <div className="page-actions">
-          <button className="btn" onClick={allOn} disabled={busy}>
+      <PageHeader
+        title={"Access control"}
+        sub={"Toggle which features each role can see in the sidebar"}
+        actions={<><button className="btn" onClick={allOn} disabled={busy}>
             <Icon name="check" size={13} />Enable all
           </button>
           <button className="btn" onClick={allOff} disabled={busy}>
@@ -170,9 +157,8 @@ export default function ScreenAccessControl({ E, refresh, role, session }) {
           </button>
           <button className="btn accent" onClick={save} disabled={busy || !dirty}>
             <Icon name="check" size={13} />{busy ? "Saving…" : dirty ? "Save changes" : "Saved"}
-          </button>
-        </div>
-      </div>
+          </button></>}
+      />
 
       {/* Role tab strip */}
       <div className="card" style={{ marginBottom: 14 }}>

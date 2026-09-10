@@ -3,7 +3,6 @@ import {
   addMessage, listMessagesBetween, listMessageThreads,
   markMessagesReadBetween, listUsers, addNotification, logAudit,
 } from "@/lib/db";
-import { DEMO_ACCOUNTS } from "@/lib/seed-users";
 import { getSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -82,22 +81,6 @@ export async function POST(req) {
     for (const role of preference) {
       admin = users.find((u) => u.role === role);
       if (admin) break;
-    }
-    // FINAL fallback: the DB has no admin user (common on fresh
-    // installs where the owner only ever logged in via the in-memory
-    // demo account — DEMO_ACCOUNTS bypasses the users table on login,
-    // so the row may not exist). Synthesise a receiver from the demo
-    // admin so parent messages always have somewhere to land. The next
-    // time the admin signs in via the demo creds, their inbox will
-    // pick up the threaded message exactly the same way as if a real
-    // DB user had received it (we addMessage with the demo id below).
-    if (!admin) {
-      const demoAdmin = DEMO_ACCOUNTS.find((a) => a.role === "admin")
-        || DEMO_ACCOUNTS.find((a) => a.role === "principal");
-      if (demoAdmin) {
-        admin = { id: demoAdmin.id, role: demoAdmin.role, name: demoAdmin.name };
-        console.warn(`[messages] Routing parent message to DEMO admin '${demoAdmin.id}' — no DB admin row exists yet. Add one with: insert into users (id,email,role,name,password_hash) values ('${demoAdmin.id}','${demoAdmin.email}','${demoAdmin.role}','${demoAdmin.name}',<bcrypt-hash>);`);
-      }
     }
     if (!admin) {
       return NextResponse.json(

@@ -20,9 +20,20 @@ export async function PUT(req) {
   if (!body?.settings || typeof body.settings !== "object") {
     return NextResponse.json({ ok: false, error: "settings object required" }, { status: 400 });
   }
+  // institutionType is a property of the tenant, not a setting. It is fixed
+  // by which institution you signed in to, and flipping it would leave the
+  // school's records wearing the college's vocabulary. Silently dropped
+  // rather than rejected, so a client that still sends the old field saves
+  // the rest of its changes instead of failing the whole request.
+  const incoming = { ...body.settings };
+  if (incoming.school && typeof incoming.school === "object") {
+    const { institutionType, institution_type, ...school } = incoming.school;
+    incoming.school = school;
+  }
+
   try {
-    const merged = await writeSettings(body.settings);
-    const sections = Object.keys(body.settings).join(", ");
+    const merged = await writeSettings(incoming);
+    const sections = Object.keys(incoming).join(", ");
     try { await logAudit(session.name || "Admin", "Updated settings", sections); } catch {}
     return NextResponse.json({ ok: true, settings: merged });
   } catch (e) {

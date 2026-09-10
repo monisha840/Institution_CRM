@@ -6,7 +6,7 @@ import { AvatarChip } from "./ui";
 import { vocab, isCollege, institutionNameParts } from "@/lib/institution";
 
 // Nav items per role. Five real roles now (admin replaces the old "super"
-// demo; academic_director is brand new).
+// deployment; academic_director is brand new).
 const RAW_NAV_BY_ROLE = {
   admin: [
     { section: "Trust" },
@@ -19,6 +19,7 @@ const RAW_NAV_BY_ROLE = {
     { id: "classes",    label: "Classes",      icon: "book" },
     { id: "timetable",  label: "Timetable",    icon: "clock" },
     { id: "attendance", label: "Attendance",   icon: "check" },
+    { id: "eligibility", label: "Attendance shortage", icon: "warning" },
     { id: "academic",   label: "Academic",     icon: "academic" },
     { id: "syllabus",   label: "Syllabus",     icon: "academic" },
     { id: "exams",      label: "Exams & Marks", icon: "reports" },
@@ -56,6 +57,7 @@ const RAW_NAV_BY_ROLE = {
     { section: "Academics" },
     { id: "dashboard",  label: "Overview",     icon: "dashboard" },
     { id: "attendance", label: "Attendance",   icon: "check" },
+    { id: "eligibility", label: "Attendance shortage", icon: "warning" },
     { id: "academic",   label: "Daily logs",   icon: "academic" },
     { id: "syllabus",   label: "Syllabus",     icon: "academic" },
     { id: "exams",      label: "Exams & Marks", icon: "reports" },
@@ -87,6 +89,7 @@ const RAW_NAV_BY_ROLE = {
     { id: "classes",    label: "Classes",      icon: "book" },
     { id: "timetable",  label: "Timetable",    icon: "clock" },
     { id: "attendance", label: "Attendance",   icon: "check" },
+    { id: "eligibility", label: "Attendance shortage", icon: "warning" },
     { id: "academic",   label: "Academic",     icon: "academic" },
     { id: "syllabus",   label: "Syllabus",     icon: "academic" },
     { id: "exams",      label: "Exams & Marks", icon: "reports" },
@@ -124,6 +127,7 @@ const RAW_NAV_BY_ROLE = {
     { id: "dashboard",     label: "Today",          icon: "dashboard" },
     { id: "my_attendance", label: "My attendance",  icon: "check" },
     { id: "attendance",    label: "Class attendance", icon: "check" },
+    { id: "eligibility", label: "Attendance shortage", icon: "warning" },
     { id: "timetable",     label: "Timetable",      icon: "clock" },
     { id: "academic",      label: "Class tracker",  icon: "academic" },
     { id: "syllabus",      label: "Syllabus",       icon: "academic" },
@@ -280,6 +284,7 @@ const RAW_FEATURE_NAV_CATALOG = [
   { id: "classes",               label: "Classes",             icon: "book" },
   { id: "timetable",             label: "Timetable",           icon: "clock" },
   { id: "attendance",            label: "Attendance",          icon: "check" },
+  { id: "eligibility",           label: "Attendance shortage", icon: "warning" },
   { id: "academic",              label: "Academic",            icon: "academic" },
   { id: "syllabus",              label: "Syllabus",            icon: "academic" },
   { id: "exams",                 label: "Exams & Marks",       icon: "reports" },
@@ -352,6 +357,7 @@ const COLLEGE_NAV_LABELS = {
   academic:  "Course log",
   enquiries: "Admissions",
   attendance:"Attendance",
+  eligibility: "Shortage & condonation",
 };
 const COLLEGE_SECTION_LABELS = { School: "College" };
 // Applies in both modes: the Trust bucket now holds only Finance.
@@ -414,6 +420,31 @@ export function buildSidebarNav(role, permissions, permExplicit) {
   }
 
   return relabelNav(kept);
+}
+
+/**
+ * Where a screen sits in the navigation: its section heading and the label
+ * on its nav item.
+ *
+ * This is the single source for a page's eyebrow and title. Screens used to
+ * write both by hand, which produced 29 distinct eyebrows across 31 pages
+ * ("People", "People · Setup", "Academics · Syllabus", "Academic ·
+ * Timetable") and titles that disagreed with the thing you clicked —
+ * "Inventory" in the sidebar opening a page headed "Stock register".
+ *
+ * Deriving both from the nav means the eyebrow always tells you where you
+ * are, the title always matches what you clicked, and the college's
+ * relabelling (Faculty, Semesters, Migration certificates) reaches the page
+ * headers for free.
+ */
+export function navMetaFor(role, screenId, permissions, permExplicit) {
+  const items = buildSidebarNav(role, permissions, permExplicit);
+  let section = null;
+  for (const it of items) {
+    if (it.section) { section = it.section; continue; }
+    if (it.id === screenId) return { section, label: it.label };
+  }
+  return { section: null, label: null };
 }
 
 // Just the ids (no section headers) — used by AppShell's auto-snap.

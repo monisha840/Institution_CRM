@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import Icon from "../Icon";
-import { KPI } from "../ui";
+import { KPI, ScreenToast as Toast, EmptyState, ModalShell, PageHeader } from "../ui";
 import { formatClassLabel } from "@/lib/format";
 
 // Built-in category buckets. Schools can also add their own — those show up
@@ -94,43 +94,7 @@ function prettyCat(c) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function Toast({ msg, tone, onClose }) {
-  if (!msg) return null;
-  const bg = tone === "ok" ? "var(--ok)" : tone === "err" ? "var(--err, #b13c1c)" : "var(--ink)";
-  return (
-    <div onClick={onClose} role="status" style={{
-      position: "fixed", bottom: 18, right: 18, zIndex: 9000,
-      background: bg, color: "#fff", padding: "9px 14px", borderRadius: 8,
-      fontSize: 12, fontWeight: 500, cursor: "pointer", maxWidth: 360,
-      boxShadow: "0 12px 30px -16px rgba(0,0,0,0.35)",
-    }}>{msg}</div>
-  );
-}
 
-function ModalShell({ title, sub, onClose, children, width = 460 }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  return (
-    <div onClick={onClose} style={{
-      position: "fixed", inset: 0, background: "var(--overlay)",
-      display: "grid", placeItems: "center", zIndex: 250, padding: 16, overflowY: "auto",
-    }}>
-      <div onClick={(e) => e.stopPropagation()} className="card" style={{ width: "100%", maxWidth: width, maxHeight: "calc(100vh - 32px)", overflowY: "auto" }}>
-        <div className="card-head">
-          <div>
-            <div className="card-title">{title}</div>
-            {sub && <div className="card-sub">{sub}</div>}
-          </div>
-          <button className="icon-btn" onClick={onClose}><Icon name="x" size={14} /></button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 function Field({ label, children, hint }) {
   return (
@@ -421,14 +385,9 @@ export default function ScreenInventory({ E, refresh, role, searchFocus, clearSe
 
   return (
     <div className="page">
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">Operations · Inventory</div>
-          <div className="page-title">Stock register</div>
-          <div className="page-sub">Purchased · issued · balance · import Excel or add items</div>
-        </div>
-        <div className="page-actions">
-          {canEdit && selectedCount > 0 && (
+      <PageHeader
+        sub={"Purchased · issued · balance · import Excel or add items"}
+        actions={<>{canEdit && selectedCount > 0 && (
             <button
               className="btn"
               onClick={handleBulkDelete}
@@ -463,9 +422,8 @@ export default function ScreenInventory({ E, refresh, role, searchFocus, clearSe
                 <Icon name="plus" size={13} />Add item
               </button>
             </>
-          )}
-        </div>
-      </div>
+          )}</>}
+      />
 
       <div className="grid g-4" style={{ marginBottom: 14 }}>
         <KPI
@@ -676,7 +634,11 @@ export default function ScreenInventory({ E, refresh, role, searchFocus, clearSe
         <div className="card">
           <div className="card-head"><div><div className="card-title">Class-wise stock health</div></div></div>
           {classHealth.length === 0 ? (
-            <div className="empty" style={{ padding: 20 }}>Stock health appears once items are tagged to classes.</div>
+            <EmptyState
+              icon="box"
+              title="No class-tagged stock"
+              body="Tag items to a class and this panel shows which classes are running low."
+            />
           ) : (
             <div style={{ padding: "8px 14px 14px", display: "flex", flexDirection: "column", gap: 6 }}>
               {classHealth.map(([cls, info]) => (
@@ -699,7 +661,11 @@ export default function ScreenInventory({ E, refresh, role, searchFocus, clearSe
         <div className="card">
           <div className="card-head"><div><div className="card-title">Recent stock movements</div></div></div>
           {movements.length === 0 ? (
-            <div className="empty" style={{ padding: 20 }}>No stock-in / stock-out movements logged yet.</div>
+            <EmptyState
+              icon="layers"
+              title="No movements logged"
+              body="Every stock-in and stock-out is recorded here with who moved it and when, so the register always reconciles."
+            />
           ) : (
             <div style={{ padding: "8px 14px 14px", display: "flex", flexDirection: "column", gap: 6 }}>
               {movements.slice(0, 8).map((m) => {
@@ -1274,7 +1240,7 @@ function ImportInventoryModal({ onClose, onSubmit }) {
               </div>
             </div>
             <div style={{ maxHeight: 220, overflow: "auto", border: "1px solid var(--rule)", borderRadius: 7 }}>
-              <table className="table" style={{ fontSize: 11.5 }}>
+              <table className="table idx" style={{ fontSize: 11.5 }}>
                 <thead>
                   <tr>
                     <th>#</th>

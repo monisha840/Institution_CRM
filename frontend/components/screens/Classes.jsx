@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Icon from "../Icon";
-import { KPI, EmptyState } from "../ui";
+import { KPI, EmptyState, ScreenToast as Toast, PageHeader } from "../ui";
 import { formatClassLabel } from "@/backend/lib/format.js";
 
 // The school runs one stream per grade (no Section A / Section B split),
@@ -150,18 +150,12 @@ export default function ScreenClasses({ E, refresh, role }) {
     <div className="page">
       <Toast toast={toast} />
 
-      <div className="page-head">
-        <div>
-          <div className="page-eyebrow">People · Setup</div>
-          <div className="page-title">Classes</div>
-          <div className="page-sub">Each grade runs as a single class. Assign one class teacher per grade — changes here flow through to admissions, the academic tracker, and every dropdown in the app.</div>
-        </div>
-        <div className="page-actions">
-          <button className="btn accent" onClick={() => setShowAdd(true)}>
+      <PageHeader
+        sub={"Each grade runs as a single class. Assign one class teacher per grade — changes here flow through to admissions, the academic tracker, and every dropdown in the app."}
+        actions={<><button className="btn accent" onClick={() => setShowAdd(true)}>
             <Icon name="plus" size={13} />Add class
-          </button>
-        </div>
-      </div>
+          </button></>}
+      />
 
       <div className="grid g-3" style={{ marginBottom: 18 }}>
         {(() => {
@@ -794,14 +788,3 @@ function Field({ label, children }) {
   );
 }
 
-function Toast({ toast }) {
-  if (!toast) return null;
-  const bg = toast.tone === "bad" ? "var(--bad)" : toast.tone === "warn" ? "var(--warn)" : "var(--ok)";
-  return (
-    <div style={{
-      position: "fixed", top: 76, left: "50%", transform: "translateX(-50%)",
-      zIndex: 300, background: bg, color: "#fff", padding: "10px 18px",
-      borderRadius: 999, fontSize: 12.5, fontWeight: 500, boxShadow: "var(--shadow-lg)",
-    }}>{toast.msg}</div>
-  );
-}

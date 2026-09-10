@@ -5,6 +5,8 @@ import { getSession } from "@/lib/auth";
 import { notifyWhatsApp } from "@/lib/whatsapp";
 import { feeTypeLabel } from "@/lib/format";
 import { renderReceiptPng } from "@/lib/receipt-image";
+import { tenantConfig } from "@/lib/tenants";
+import { currentTenant } from "@/lib/tenant-context";
 
 export async function POST(req) {
   const session = await getSession();
@@ -114,7 +116,7 @@ export async function POST(req) {
         `Balance to pay: ${balanceLabel}`,
         "",
         "Thank you for paying the fees.",
-        "— Sirah Demo School",
+        `— ${tenantConfig(currentTenant()).name}`,
       ].join("\n");
 
       // Don't await — let it run in the background.

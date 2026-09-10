@@ -5,6 +5,8 @@ import { getSession } from "@/lib/auth";
 import { notifyWhatsApp } from "@/lib/whatsapp";
 import { renderReceiptPng } from "@/lib/receipt-image";
 import { feeTypeLabel } from "@/lib/format";
+import { tenantConfig } from "@/lib/tenants";
+import { currentTenant } from "@/lib/tenant-context";
 
 export const dynamic = "force-dynamic";
 
@@ -34,8 +36,8 @@ export async function POST(req) {
     // checkout deep-link routes to the correct account. Fall back to a
     // safe default if the admin hasn't filled them in yet.
     const settings = await readSettings();
-    const upiId     = settings?.finance?.upi || "sirahdemo@hdfc";
-    const payeeName = settings?.finance?.upiPayeeName || "Sirah Demo School";
+    const upiId     = settings?.finance?.upi || tenantConfig(currentTenant()).upi;
+    const payeeName = settings?.finance?.upiPayeeName || tenantConfig(currentTenant()).upiPayeeName;
     const order = {
       orderId: `OR-${Date.now().toString(36).toUpperCase()}-${Math.floor(Math.random() * 999)}`,
       gateway: "Razorpay (sandbox)",
@@ -111,7 +113,7 @@ export async function POST(req) {
           `Balance to pay: ${balanceLabel}`,
           "",
           "Thank you for paying the fees.",
-          "— Sirah Demo School",
+          `— ${tenantConfig(currentTenant()).name}`,
         ].join("\n");
         notifyWhatsApp("fee_paid", {
           phone,

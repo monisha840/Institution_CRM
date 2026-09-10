@@ -6,9 +6,9 @@ import { supabase, supabaseEnabled } from "@/lib/supabase";
 export const dynamic = "force-dynamic";
 
 // Admin-only.
-// Wipes every parent user account and re-creates one fresh login per
-// current student so the email / password follow the deterministic
-// "parent.{slug(name)}@sirahdemo.school" + "{FirstName}@123" scheme.
+// Wipes every parent/guardian user account and re-creates one fresh login
+// per current student, on the institution's own domain
+// ("{student}@parents.{domain}") with a freshly generated password each.
 //
 // Use when stale parent users from earlier imports are colliding with
 // freshly-imported students (e.g. random STN-XXXX IDs got reused and
