@@ -7,7 +7,12 @@ export const metadata = {
   title: "Sirah CRM",
   description:
     "School and college ERP — admissions, fees, attendance, examinations, transport and parent communication in one system.",
-  icons: { icon: "/logo.png" },
+  // No `icons` here on purpose. Setting it would override Next's file
+  // convention and pin the tab back to /logo.png — which is 539x463, so
+  // browsers squashed it to fit 16px. app/icon.png and app/apple-icon.png
+  // are square crops of the same mark and get picked up automatically,
+  // with hashed URLs that also break the old favicon out of cache.
+  // public/favicon.ico covers the bare /favicon.ico probe.
 };
 
 export default function RootLayout({ children }) {
